@@ -1,0 +1,612 @@
+RANDOM_IDS = {978663613,5261700291,1846241644,4993456331,424866237,4312175249,176548116,2270483006,1387071394,2705922253,10115152913,254675749,5282085572,2819144629,2342272463,3877709773,3641789924,5023103942,2298753899,5022264302,66372478,1059023987,2530406197,1992137495,402058769,1208673935,1735121788,3236271187,4797655515,8820259986,1538346377,7081300715,1648676291,2818915354,263336582,1510381464,683993767,1033636351,4004052767,7709627778,5196381745,4983064295,937392108,974086214,6004535943,744532329,2216132529,797871247,442581442,7927897698,4344692203,113408119,4439685307,670917583,5158458988,373349,2994206407,596318021,2574010621,7757117305,1780106970,3872493784,382383327,1921058820,1817915221,2799348313,189511979}
+
+SVC = setmetatable({},{__index=function(s,n)s[n]=game:GetService(n)return s[n]end})
+LP = SVC.Players.LocalPlayer
+TS = SVC.TweenService
+
+GUI = Instance.new("ScreenGui",gethui and gethui()or SVC.CoreGui)
+GUI.DisplayOrder = 9999999
+GUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+GUI.ResetOnSpawn = false
+
+MAIN = Instance.new("Frame",GUI)
+MAIN.Size = UDim2.new(0,280,0,420)
+MAIN.Position = UDim2.new(0,30,0.5,-210)
+MAIN.BackgroundColor3 = Color3.fromRGB(14,14,20)
+MAIN.BorderSizePixel = 0
+MAIN.Active = true
+MAIN.Draggable = true
+
+MAIN_CORNER = Instance.new("UICorner",MAIN)
+MAIN_CORNER.CornerRadius = UDim.new(0,18)
+
+MAIN_STROKE = Instance.new("UIStroke",MAIN)
+MAIN_STROKE.Color = Color3.fromRGB(150,110,230)
+MAIN_STROKE.Thickness = 2
+MAIN_STROKE.Transparency = 0.3
+
+MAIN_GRAD = Instance.new("UIGradient",MAIN)
+MAIN_GRAD.Color = ColorSequence.new{ColorSequenceKeypoint.new(0,Color3.fromRGB(18,18,26)),ColorSequenceKeypoint.new(1,Color3.fromRGB(14,14,20))}
+MAIN_GRAD.Rotation = 135
+
+ACCENT_LINE_1 = Instance.new("Frame",MAIN)
+ACCENT_LINE_1.Size = UDim2.new(0,100,0,2)
+ACCENT_LINE_1.Position = UDim2.new(0,16,0,72)
+ACCENT_LINE_1.BackgroundColor3 = Color3.fromRGB(160,120,240)
+ACCENT_LINE_1.BorderSizePixel = 0
+AL1C = Instance.new("UICorner",ACCENT_LINE_1)
+AL1C.CornerRadius = UDim.new(1,0)
+AL1G = Instance.new("UIGradient",ACCENT_LINE_1)
+AL1G.Color = ColorSequence.new{ColorSequenceKeypoint.new(0,Color3.fromRGB(160,120,240)),ColorSequenceKeypoint.new(1,Color3.fromRGB(80,60,120))}
+
+HEADER = Instance.new("Frame",MAIN)
+HEADER.Size = UDim2.new(1,0,0,65)
+HEADER.BackgroundColor3 = Color3.fromRGB(20,20,28)
+HEADER.BorderSizePixel = 0
+
+HEADER_CORNER = Instance.new("UICorner",HEADER)
+HEADER_CORNER.CornerRadius = UDim.new(0,18)
+
+HEADER_BOTTOM = Instance.new("Frame",HEADER)
+HEADER_BOTTOM.Size = UDim2.new(1,0,0,18)
+HEADER_BOTTOM.Position = UDim2.new(0,0,1,-18)
+HEADER_BOTTOM.BackgroundColor3 = Color3.fromRGB(20,20,28)
+HEADER_BOTTOM.BorderSizePixel = 0
+
+HEADER_GRAD = Instance.new("UIGradient",HEADER)
+HEADER_GRAD.Color = ColorSequence.new{ColorSequenceKeypoint.new(0,Color3.fromRGB(180,140,250)),ColorSequenceKeypoint.new(1,Color3.fromRGB(120,85,200))}
+HEADER_GRAD.Rotation = 60
+
+TITLE = Instance.new("TextLabel",HEADER)
+TITLE.Size = UDim2.new(1,-80,0,28)
+TITLE.Position = UDim2.new(0,16,0,12)
+TITLE.BackgroundTransparency = 1
+TITLE.Text = "sight"
+TITLE.TextColor3 = Color3.fromRGB(255,255,255)
+TITLE.TextSize = 22
+TITLE.Font = Enum.Font.GothamBold
+TITLE.TextXAlignment = Enum.TextXAlignment.Left
+TITLE.TextStrokeTransparency = 0.8
+
+SUBTITLE_MAIN = Instance.new("TextLabel",HEADER)
+SUBTITLE_MAIN.Size = UDim2.new(1,-80,0,18)
+SUBTITLE_MAIN.Position = UDim2.new(0,16,0,40)
+SUBTITLE_MAIN.BackgroundTransparency = 1
+SUBTITLE_MAIN.Text = "by oxylua!"
+SUBTITLE_MAIN.TextColor3 = Color3.fromRGB(200,200,230)
+SUBTITLE_MAIN.TextSize = 11
+SUBTITLE_MAIN.Font = Enum.Font.Gotham
+SUBTITLE_MAIN.TextXAlignment = Enum.TextXAlignment.Left
+
+MINIMIZE_BTN = Instance.new("TextButton",HEADER)
+MINIMIZE_BTN.Size = UDim2.new(0,28,0,28)
+MINIMIZE_BTN.Position = UDim2.new(1,-38,0,16)
+MINIMIZE_BTN.BackgroundColor3 = Color3.fromRGB(30,30,40)
+MINIMIZE_BTN.BorderSizePixel = 0
+MINIMIZE_BTN.AutoButtonColor = false
+MINIMIZE_BTN.Text = "−"
+MINIMIZE_BTN.TextColor3 = Color3.fromRGB(220,220,240)
+MINIMIZE_BTN.TextSize = 22
+MINIMIZE_BTN.Font = Enum.Font.GothamBold
+
+MINIMIZE_CORNER = Instance.new("UICorner",MINIMIZE_BTN)
+MINIMIZE_CORNER.CornerRadius = UDim.new(0,10)
+
+TABS_CONTAINER = Instance.new("Frame",MAIN)
+TABS_CONTAINER.Size = UDim2.new(1,-32,0,36)
+TABS_CONTAINER.Position = UDim2.new(0,16,0,82)
+TABS_CONTAINER.BackgroundTransparency = 1
+
+TABS_LAYOUT = Instance.new("UIListLayout",TABS_CONTAINER)
+TABS_LAYOUT.FillDirection = Enum.FillDirection.Horizontal
+TABS_LAYOUT.Padding = UDim.new(0,14)
+
+CHANGER_TAB = Instance.new("TextButton",TABS_CONTAINER)
+CHANGER_TAB.Size = UDim2.new(0.48,0,1,0)
+CHANGER_TAB.BackgroundColor3 = Color3.fromRGB(150,110,230)
+CHANGER_TAB.BorderSizePixel = 0
+CHANGER_TAB.AutoButtonColor = false
+CHANGER_TAB.Text = "CHANGER"
+CHANGER_TAB.TextColor3 = Color3.fromRGB(255,255,255)
+CHANGER_TAB.TextSize = 12
+CHANGER_TAB.Font = Enum.Font.GothamBold
+
+CT_CORNER = Instance.new("UICorner",CHANGER_TAB)
+CT_CORNER.CornerRadius = UDim.new(0,10)
+
+CT_GRAD = Instance.new("UIGradient",CHANGER_TAB)
+CT_GRAD.Color = ColorSequence.new{ColorSequenceKeypoint.new(0,Color3.fromRGB(170,130,250)),ColorSequenceKeypoint.new(1,Color3.fromRGB(130,90,210))}
+CT_GRAD.Rotation = 45
+
+FAV_TAB = Instance.new("TextButton",TABS_CONTAINER)
+FAV_TAB.Size = UDim2.new(0.48,0,1,0)
+FAV_TAB.BackgroundColor3 = Color3.fromRGB(26,26,36)
+FAV_TAB.BorderSizePixel = 0
+FAV_TAB.AutoButtonColor = false
+FAV_TAB.Text = "FAVORITED"
+FAV_TAB.TextColor3 = Color3.fromRGB(150,150,180)
+FAV_TAB.TextSize = 12
+FAV_TAB.Font = Enum.Font.GothamBold
+
+FT_CORNER = Instance.new("UICorner",FAV_TAB)
+FT_CORNER.CornerRadius = UDim.new(0,10)
+
+CONTENT_AREA = Instance.new("Frame",MAIN)
+CONTENT_AREA.Size = UDim2.new(1,-32,1,-230)
+CONTENT_AREA.Position = UDim2.new(0,16,0,126)
+CONTENT_AREA.BackgroundTransparency = 1
+CONTENT_AREA.ClipsDescendants = true
+
+CHANGER_PAGE = Instance.new("Frame",CONTENT_AREA)
+CHANGER_PAGE.Size = UDim2.new(1,0,1,0)
+CHANGER_PAGE.BackgroundTransparency = 1
+
+INPUT_FIELD = Instance.new("TextBox",CHANGER_PAGE)
+INPUT_FIELD.Size = UDim2.new(1,0,0,40)
+INPUT_FIELD.BackgroundColor3 = Color3.fromRGB(24,24,34)
+INPUT_FIELD.BorderSizePixel = 0
+INPUT_FIELD.PlaceholderText = "User ID or Username"
+INPUT_FIELD.PlaceholderColor3 = Color3.fromRGB(100,100,130)
+INPUT_FIELD.Text = ""
+INPUT_FIELD.TextColor3 = Color3.fromRGB(255,255,255)
+INPUT_FIELD.TextSize = 14
+INPUT_FIELD.Font = Enum.Font.Gotham
+INPUT_FIELD.ClearTextOnFocus = false
+
+IF_CORNER = Instance.new("UICorner",INPUT_FIELD)
+IF_CORNER.CornerRadius = UDim.new(0,10)
+
+IF_STROKE = Instance.new("UIStroke",INPUT_FIELD)
+IF_STROKE.Color = Color3.fromRGB(60,60,80)
+IF_STROKE.Thickness = 1.5
+IF_STROKE.Transparency = 0.5
+
+BUTTONS_CONTAINER = Instance.new("Frame",CHANGER_PAGE)
+BUTTONS_CONTAINER.Size = UDim2.new(1,0,0,40)
+BUTTONS_CONTAINER.Position = UDim2.new(0,0,0,48)
+BUTTONS_CONTAINER.BackgroundTransparency = 1
+
+BC_LAYOUT = Instance.new("UIListLayout",BUTTONS_CONTAINER)
+BC_LAYOUT.FillDirection = Enum.FillDirection.Horizontal
+BC_LAYOUT.Padding = UDim.new(0,14)
+
+APPLY_BTN = Instance.new("TextButton",BUTTONS_CONTAINER)
+APPLY_BTN.Size = UDim2.new(0.48,0,1,0)
+APPLY_BTN.BackgroundColor3 = Color3.fromRGB(150,110,230)
+APPLY_BTN.BorderSizePixel = 0
+APPLY_BTN.AutoButtonColor = false
+APPLY_BTN.Text = "APPLY"
+APPLY_BTN.TextColor3 = Color3.fromRGB(255,255,255)
+APPLY_BTN.TextSize = 13
+APPLY_BTN.Font = Enum.Font.GothamBold
+
+AB_CORNER = Instance.new("UICorner",APPLY_BTN)
+AB_CORNER.CornerRadius = UDim.new(0,10)
+
+AB_GRAD = Instance.new("UIGradient",APPLY_BTN)
+AB_GRAD.Color = ColorSequence.new{ColorSequenceKeypoint.new(0,Color3.fromRGB(170,130,250)),ColorSequenceKeypoint.new(1,Color3.fromRGB(130,90,210))}
+AB_GRAD.Rotation = 45
+
+RANDOM_BTN = Instance.new("TextButton",BUTTONS_CONTAINER)
+RANDOM_BTN.Size = UDim2.new(0.48,0,1,0)
+RANDOM_BTN.BackgroundColor3 = Color3.fromRGB(150,110,230)
+RANDOM_BTN.BorderSizePixel = 0
+RANDOM_BTN.AutoButtonColor = false
+RANDOM_BTN.Text = "RANDOM"
+RANDOM_BTN.TextColor3 = Color3.fromRGB(255,255,255)
+RANDOM_BTN.TextSize = 12
+RANDOM_BTN.Font = Enum.Font.GothamBold
+
+RB_CORNER = Instance.new("UICorner",RANDOM_BTN)
+RB_CORNER.CornerRadius = UDim.new(0,11)
+
+RB_GRAD = Instance.new("UIGradient",RANDOM_BTN)
+RB_GRAD.Color = ColorSequence.new{ColorSequenceKeypoint.new(0,Color3.fromRGB(170,130,250)),ColorSequenceKeypoint.new(1,Color3.fromRGB(130,90,210))}
+RB_GRAD.Rotation = 45
+
+FAV_BTN = Instance.new("TextButton",CHANGER_PAGE)
+FAV_BTN.Size = UDim2.new(1,0,0,40)
+FAV_BTN.Position = UDim2.new(0,0,0,96)
+FAV_BTN.BackgroundColor3 = Color3.fromRGB(26,26,36)
+FAV_BTN.BorderSizePixel = 0
+FAV_BTN.AutoButtonColor = false
+FAV_BTN.Text = "♡  ADD TO FAVORITES"
+FAV_BTN.TextColor3 = Color3.fromRGB(210,210,240)
+FAV_BTN.TextSize = 13
+FAV_BTN.Font = Enum.Font.GothamBold
+
+FB_CORNER = Instance.new("UICorner",FAV_BTN)
+FB_CORNER.CornerRadius = UDim.new(0,10)
+
+FB_STROKE = Instance.new("UIStroke",FAV_BTN)
+FB_STROKE.Color = Color3.fromRGB(60,60,80)
+FB_STROKE.Thickness = 1.5
+FB_STROKE.Transparency = 0.5
+
+RESET_BTN = Instance.new("TextButton",CHANGER_PAGE)
+RESET_BTN.Size = UDim2.new(1,0,0,40)
+RESET_BTN.Position = UDim2.new(0,0,0,144)
+RESET_BTN.BackgroundColor3 = Color3.fromRGB(26,26,36)
+RESET_BTN.BorderSizePixel = 0
+RESET_BTN.AutoButtonColor = false
+RESET_BTN.Text = "RESET TO ORIGINAL"
+RESET_BTN.TextColor3 = Color3.fromRGB(210,210,240)
+RESET_BTN.TextSize = 12
+RESET_BTN.Font = Enum.Font.GothamBold
+
+REB_CORNER = Instance.new("UICorner",RESET_BTN)
+REB_CORNER.CornerRadius = UDim.new(0,10)
+
+REB_STROKE = Instance.new("UIStroke",RESET_BTN)
+REB_STROKE.Color = Color3.fromRGB(60,60,80)
+REB_STROKE.Thickness = 1.5
+REB_STROKE.Transparency = 0.5
+
+FAV_PAGE = Instance.new("ScrollingFrame",CONTENT_AREA)
+FAV_PAGE.Size = UDim2.new(1,0,1,0)
+FAV_PAGE.BackgroundTransparency = 1
+FAV_PAGE.BorderSizePixel = 0
+FAV_PAGE.ScrollBarThickness = 5
+FAV_PAGE.ScrollBarImageColor3 = Color3.fromRGB(150,110,230)
+FAV_PAGE.Visible = false
+
+FP_LAYOUT = Instance.new("UIListLayout",FAV_PAGE)
+FP_LAYOUT.Padding = UDim.new(0,14)
+
+EMPTY_FAV = Instance.new("TextLabel",FAV_PAGE)
+EMPTY_FAV.Size = UDim2.new(1,0,0,200)
+EMPTY_FAV.BackgroundTransparency = 1
+EMPTY_FAV.Text = "♡\n\nNo favorites yet\n\nAdd avatars to your collection"
+EMPTY_FAV.TextColor3 = Color3.fromRGB(130,130,160)
+EMPTY_FAV.TextSize = 15
+EMPTY_FAV.Font = Enum.Font.GothamMedium
+
+CURRENT_AVATAR = nil
+ORIGINAL_DESC = nil
+MINIMIZED_STATE = false
+FAVORITES = {}
+ACTIVE_TAB = "changer"
+
+task.spawn(function()
+    pcall(function()
+        if not isfolder("AvatarChanger") then makefolder("AvatarChanger") end
+        if isfile("AvatarChanger/favorites.json") then
+            FAVORITES = game:GetService("HttpService"):JSONDecode(readfile("AvatarChanger/favorites.json"))
+            task.wait(0.2)
+            UPDATEFAVLIST()
+        end
+    end)
+end)
+
+SAVEFAVORITES = function()
+    task.spawn(function()
+        pcall(function()
+            if not isfolder("AvatarChanger") then makefolder("AvatarChanger") end
+            writefile("AvatarChanger/favorites.json",game:GetService("HttpService"):JSONEncode(FAVORITES))
+        end)
+    end)
+end
+
+if LP.Character then
+    HUM = LP.Character:FindFirstChild("Humanoid")
+    if HUM then ORIGINAL_DESC = HUM:GetAppliedDescription() end
+end
+
+MORPHCHAR = function(char,name,id,desc)
+    task.spawn(function()
+        xpcall(function()
+            task.wait(0.3)
+            HUM = char:WaitForChild("Humanoid",10)
+            if not HUM then return end
+            for _,v in char:GetDescendants() do
+                if v:IsA("Accessory") or v:IsA("Hat") then v:Destroy() end
+            end
+            for _,v in char:GetChildren() do
+                if v:IsA("Shirt") or v:IsA("Pants") or v:IsA("ShirtGraphic") or v:IsA("CharacterMesh") then v:Destroy() end
+            end
+            BC = HUM:FindFirstChildOfClass("BodyColors")
+            if BC then BC:Destroy() end
+            for _,n in {"Torso","Left Arm","Right Arm","Left Leg","Right Leg"} do
+                PT = char:FindFirstChild(n)
+                if PT then
+                    for _,v in PT:GetChildren() do
+                        if v:IsA("SpecialMesh") then v:Destroy() end
+                    end
+                end
+            end
+            HEAD = char:FindFirstChild("Head")
+            if HEAD then
+                MESH = HEAD:FindFirstChildOfClass("SpecialMesh")
+                if MESH then MESH.MeshId = "" MESH.TextureId = "" end
+            end
+            task.wait(0.1)
+            HUM:ApplyDescriptionClientServer(desc)
+            HUM.DisplayName = name
+        end,warn)
+    end)
+end
+
+UPDATEFAVBTN = function()
+    if not CURRENT_AVATAR then
+        FAV_BTN.BackgroundColor3 = Color3.fromRGB(26,26,36)
+        FAV_BTN.Text = "♡  ADD TO FAVORITES"
+        FAV_BTN.TextColor3 = Color3.fromRGB(210,210,240)
+        return
+    end
+    ISFAV = false
+    for _,v in FAVORITES do
+        if v.id == CURRENT_AVATAR.id then ISFAV = true break end
+    end
+    if ISFAV then
+        FAV_BTN.BackgroundColor3 = Color3.fromRGB(240,70,110)
+        FAV_BTN.Text = "♥  FAVORITED"
+        FAV_BTN.TextColor3 = Color3.fromRGB(255,255,255)
+        FB_STROKE.Color = Color3.fromRGB(255,120,160)
+    else
+        FAV_BTN.BackgroundColor3 = Color3.fromRGB(26,26,36)
+        FAV_BTN.Text = "♡  ADD TO FAVORITES"
+        FAV_BTN.TextColor3 = Color3.fromRGB(210,210,240)
+        FB_STROKE.Color = Color3.fromRGB(60,60,80)
+    end
+end
+
+UPDATEFAVLIST = function()
+    for _,v in FAV_PAGE:GetChildren() do
+        if v:IsA("Frame") then v:Destroy() end
+    end
+    if #FAVORITES == 0 then
+        EMPTY_FAV.Visible = true
+        FP_LAYOUT:ApplyLayout()
+        FAV_PAGE.CanvasSize = UDim2.new(0,0,0,0)
+        return
+    end
+    EMPTY_FAV.Visible = false
+    for _,fav in FAVORITES do
+        ITEM = Instance.new("Frame",FAV_PAGE)
+        ITEM.Size = UDim2.new(1,0,0,76)
+        ITEM.BackgroundColor3 = Color3.fromRGB(24,24,34)
+        ITEM.BorderSizePixel = 0
+        ITM_CORNER = Instance.new("UICorner",ITEM)
+        ITM_CORNER.CornerRadius = UDim.new(0,11)
+        ITM_STROKE = Instance.new("UIStroke",ITEM)
+        ITM_STROKE.Color = Color3.fromRGB(60,60,80)
+        ITM_STROKE.Thickness = 1.5
+        ITM_STROKE.Transparency = 0.5
+        ITM_NAME = Instance.new("TextLabel",ITEM)
+        ITM_NAME.Size = UDim2.new(1,-140,0,28)
+        ITM_NAME.Position = UDim2.new(0,16,0,16)
+        ITM_NAME.BackgroundTransparency = 1
+        ITM_NAME.Text = fav.name
+        ITM_NAME.TextColor3 = Color3.fromRGB(255,255,255)
+        ITM_NAME.TextSize = 16
+        ITM_NAME.Font = Enum.Font.GothamBold
+        ITM_NAME.TextXAlignment = Enum.TextXAlignment.Left
+        ITM_NAME.TextTruncate = Enum.TextTruncate.AtEnd
+        ITM_ID = Instance.new("TextLabel",ITEM)
+        ITM_ID.Size = UDim2.new(1,-140,0,22)
+        ITM_ID.Position = UDim2.new(0,16,0,46)
+        ITM_ID.BackgroundTransparency = 1
+        ITM_ID.Text = "ID: "..fav.id
+        ITM_ID.TextColor3 = Color3.fromRGB(150,150,180)
+        ITM_ID.TextSize = 12
+        ITM_ID.Font = Enum.Font.Gotham
+        ITM_ID.TextXAlignment = Enum.TextXAlignment.Left
+        APPLY = Instance.new("TextButton",ITEM)
+        APPLY.Size = UDim2.new(0,65,0,38)
+        APPLY.Position = UDim2.new(1,-72,0,16)
+        APPLY.BackgroundColor3 = Color3.fromRGB(150,110,230)
+        APPLY.BorderSizePixel = 0
+        APPLY.AutoButtonColor = false
+        APPLY.Text = "APPLY"
+        APPLY.TextColor3 = Color3.fromRGB(255,255,255)
+        APPLY.TextSize = 13
+        APPLY.Font = Enum.Font.GothamBold
+        APPLY_CORNER = Instance.new("UICorner",APPLY)
+        APPLY_CORNER.CornerRadius = UDim.new(0,9)
+        APPLY_GRAD = Instance.new("UIGradient",APPLY)
+        APPLY_GRAD.Color = ColorSequence.new{ColorSequenceKeypoint.new(0,Color3.fromRGB(170,130,250)),ColorSequenceKeypoint.new(1,Color3.fromRGB(130,90,210))}
+        APPLY_GRAD.Rotation = 45
+        REMOVE = Instance.new("TextButton",ITEM)
+        REMOVE.Size = UDim2.new(0,38,0,38)
+        REMOVE.Position = UDim2.new(1,-36,0,16)
+        REMOVE.BackgroundColor3 = Color3.fromRGB(220,70,100)
+        REMOVE.BorderSizePixel = 0
+        REMOVE.AutoButtonColor = false
+        REMOVE.Text = "×"
+        REMOVE.TextColor3 = Color3.fromRGB(255,255,255)
+        REMOVE.TextSize = 22
+        REMOVE.Font = Enum.Font.GothamBold
+        REMOVE_CORNER = Instance.new("UICorner",REMOVE)
+        REMOVE_CORNER.CornerRadius = UDim.new(0,9)
+        APPLY.MouseButton1Click:Connect(function()
+            INPUT_FIELD.Text = tostring(fav.id)
+            APPLYAVATAR(fav.id)
+            CHANGER_TAB.BackgroundColor3 = Color3.fromRGB(150,110,230)
+            CHANGER_TAB.TextColor3 = Color3.fromRGB(255,255,255)
+            FAV_TAB.BackgroundColor3 = Color3.fromRGB(26,26,36)
+            FAV_TAB.TextColor3 = Color3.fromRGB(150,150,180)
+            CHANGER_PAGE.Visible = true
+            FAV_PAGE.Visible = false
+            ACTIVE_TAB = "changer"
+        end)
+        REMOVE.MouseButton1Click:Connect(function()
+            NEW = {}
+            for _,v in FAVORITES do
+                if v.id ~= fav.id then table.insert(NEW,v) end
+            end
+            FAVORITES = NEW
+            SAVEFAVORITES()
+            UPDATEFAVLIST()
+            UPDATEFAVBTN()
+        end)
+    end
+    FP_LAYOUT:ApplyLayout()
+    FAV_PAGE.CanvasSize = UDim2.new(0,0,0,FP_LAYOUT.AbsoluteContentSize.Y+14)
+end
+
+APPLYAVATAR = function(userid)
+    task.spawn(function()
+        xpcall(function()
+            INPUT_TEXT = tostring(userid):gsub("%s+","")
+            ID = tonumber(INPUT_TEXT)
+            NAME = nil
+            if ID then
+                SUCCESS = pcall(function() NAME = SVC.Players:GetNameFromUserIdAsync(ID) end)
+                if not SUCCESS or not NAME then return end
+            else
+                SUCCESS = pcall(function()
+                    ID = SVC.Players:GetUserIdFromNameAsync(INPUT_TEXT)
+                    NAME = SVC.Players:GetNameFromUserIdAsync(ID)
+                end)
+                if not SUCCESS or not NAME or not ID then return end
+            end
+            DESC = SVC.Players:GetHumanoidDescriptionFromUserId(ID)
+            CURRENT_AVATAR = {id=ID,name=NAME,desc=DESC}
+            if LP.Character then MORPHCHAR(LP.Character,NAME,ID,DESC) end
+            LP.CharacterAdded:Connect(function(char)
+                if CURRENT_AVATAR and CURRENT_AVATAR.id == ID then MORPHCHAR(char,NAME,ID,DESC) end
+            end)
+            UPDATEFAVBTN()
+        end,warn)
+    end)
+end
+
+APPLY_BTN.MouseEnter:Connect(function()
+    TS:Create(APPLY_BTN,TweenInfo.new(0.2),{Size=UDim2.new(0.48,0,1,2)}):Play()
+end)
+APPLY_BTN.MouseLeave:Connect(function()
+    TS:Create(APPLY_BTN,TweenInfo.new(0.2),{Size=UDim2.new(0.48,0,1,0)}):Play()
+end)
+APPLY_BTN.MouseButton1Click:Connect(function()
+    if INPUT_FIELD.Text ~= "" then APPLYAVATAR(INPUT_FIELD.Text) end
+end)
+
+RANDOM_BTN.MouseEnter:Connect(function()
+    TS:Create(RANDOM_BTN,TweenInfo.new(0.2),{Size=UDim2.new(0.48,0,1,2)}):Play()
+end)
+RANDOM_BTN.MouseLeave:Connect(function()
+    TS:Create(RANDOM_BTN,TweenInfo.new(0.2),{Size=UDim2.new(0.48,0,1,0)}):Play()
+end)
+RANDOM_BTN.MouseButton1Click:Connect(function()
+    RND = RANDOM_IDS[math.random(1,#RANDOM_IDS)]
+    INPUT_FIELD.Text = tostring(RND)
+    APPLYAVATAR(RND)
+end)
+
+FAV_BTN.MouseEnter:Connect(function()
+    TS:Create(FAV_BTN,TweenInfo.new(0.2),{Size=UDim2.new(1,0,0,42)}):Play()
+    TS:Create(FB_STROKE,TweenInfo.new(0.2),{Transparency=0.2}):Play()
+end)
+FAV_BTN.MouseLeave:Connect(function()
+    TS:Create(FAV_BTN,TweenInfo.new(0.2),{Size=UDim2.new(1,0,0,40)}):Play()
+    TS:Create(FB_STROKE,TweenInfo.new(0.2),{Transparency=0.5}):Play()
+end)
+FAV_BTN.MouseButton1Click:Connect(function()
+    if not CURRENT_AVATAR then return end
+    EXISTS = false
+    IDX = 0
+    for i,v in FAVORITES do
+        if v.id == CURRENT_AVATAR.id then EXISTS = true IDX = i break end
+    end
+    if EXISTS then
+        table.remove(FAVORITES,IDX)
+    else
+        table.insert(FAVORITES,CURRENT_AVATAR)
+    end
+    SAVEFAVORITES()
+    UPDATEFAVBTN()
+    UPDATEFAVLIST()
+end)
+
+RESET_BTN.MouseEnter:Connect(function()
+    TS:Create(RESET_BTN,TweenInfo.new(0.2),{Size=UDim2.new(1,0,0,42)}):Play()
+    TS:Create(REB_STROKE,TweenInfo.new(0.2),{Transparency=0.2}):Play()
+end)
+RESET_BTN.MouseLeave:Connect(function()
+    TS:Create(RESET_BTN,TweenInfo.new(0.2),{Size=UDim2.new(1,0,0,40)}):Play()
+    TS:Create(REB_STROKE,TweenInfo.new(0.2),{Transparency=0.5}):Play()
+end)
+RESET_BTN.MouseButton1Click:Connect(function()
+    if ORIGINAL_DESC and LP.Character then
+        HUM = LP.Character:FindFirstChild("Humanoid")
+        if HUM then
+            HUM:ApplyDescriptionClientServer(ORIGINAL_DESC)
+            HUM.DisplayName = LP.DisplayName
+        end
+    end
+    CURRENT_AVATAR = nil
+    UPDATEFAVBTN()
+end)
+
+CHANGER_TAB.MouseButton1Click:Connect(function()
+    if ACTIVE_TAB == "changer" then return end
+    ACTIVE_TAB = "changer"
+    CHANGER_TAB.BackgroundColor3 = Color3.fromRGB(150,110,230)
+    CHANGER_TAB.TextColor3 = Color3.fromRGB(255,255,255)
+    FAV_TAB.BackgroundColor3 = Color3.fromRGB(26,26,36)
+    FAV_TAB.TextColor3 = Color3.fromRGB(150,150,180)
+    CHANGER_PAGE.Visible = true
+    FAV_PAGE.Visible = false
+end)
+
+FAV_TAB.MouseButton1Click:Connect(function()
+    if ACTIVE_TAB == "favorited" then return end
+    ACTIVE_TAB = "favorited"
+    FAV_TAB.BackgroundColor3 = Color3.fromRGB(150,110,230)
+    FAV_TAB.TextColor3 = Color3.fromRGB(255,255,255)
+    CHANGER_TAB.BackgroundColor3 = Color3.fromRGB(26,26,36)
+    CHANGER_TAB.TextColor3 = Color3.fromRGB(150,150,180)
+    CHANGER_PAGE.Visible = false
+    FAV_PAGE.Visible = true
+    UPDATEFAVLIST()
+end)
+
+MINIMIZE_BTN.MouseEnter:Connect(function()
+    TS:Create(MINIMIZE_BTN,TweenInfo.new(0.2),{BackgroundColor3=Color3.fromRGB(40,40,52)}):Play()
+end)
+MINIMIZE_BTN.MouseLeave:Connect(function()
+    TS:Create(MINIMIZE_BTN,TweenInfo.new(0.2),{BackgroundColor3=Color3.fromRGB(30,30,40)}):Play()
+end)
+MINIMIZE_BTN.MouseButton1Click:Connect(function()
+    MINIMIZED_STATE = true
+    MAIN.Visible = false
+    MINIMIZED_ICON.Visible = true
+end)
+
+-- Smaller minimized icon (40x40) with draggable property
+MINIMIZED_ICON = Instance.new("Frame",GUI)
+MINIMIZED_ICON.Size = UDim2.new(0,40,0,40)
+MINIMIZED_ICON.Position = UDim2.new(0,30,0.5,-20)
+MINIMIZED_ICON.BackgroundColor3 = Color3.fromRGB(150,110,230)
+MINIMIZED_ICON.BorderSizePixel = 0
+MINIMIZED_ICON.Visible = false
+MINIMIZED_ICON.Active = true
+MINIMIZED_ICON.Draggable = true
+
+MI_CORNER = Instance.new("UICorner",MINIMIZED_ICON)
+MI_CORNER.CornerRadius = UDim.new(0,12)
+
+MI_STROKE = Instance.new("UIStroke",MINIMIZED_ICON)
+MI_STROKE.Color = Color3.fromRGB(200,160,255)
+MI_STROKE.Thickness = 2
+MI_STROKE.Transparency = 0.2
+
+MI_GRAD = Instance.new("UIGradient",MINIMIZED_ICON)
+MI_GRAD.Color = ColorSequence.new{ColorSequenceKeypoint.new(0,Color3.fromRGB(180,140,250)),ColorSequenceKeypoint.new(1,Color3.fromRGB(120,85,200))}
+MI_GRAD.Rotation = 45
+
+OPEN_BTN = Instance.new("TextButton",MINIMIZED_ICON)
+OPEN_BTN.Size = UDim2.new(1,0,1,0)
+OPEN_BTN.BackgroundTransparency = 1
+OPEN_BTN.Text = "+"
+OPEN_BTN.TextColor3 = Color3.fromRGB(255,255,255)
+OPEN_BTN.TextSize = 24
+OPEN_BTN.Font = Enum.Font.GothamBold
+
+OPEN_BTN.MouseButton1Click:Connect(function()
+    MINIMIZED_STATE = false
+    MINIMIZED_ICON.Visible = false
+    MAIN.Visible = true
+end)
+
+UPDATEFAVLIST()
