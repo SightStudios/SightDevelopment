@@ -1,0 +1,1181 @@
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+local HttpService = game:GetService("HttpService")
+
+local lp = Players.LocalPlayer
+local mouse = lp:GetMouse()
+local cam = workspace.CurrentCamera
+
+RunService.RenderStepped:Connect(function()
+	cam = workspace.CurrentCamera
+end)
+
+local isMobile = UserInputService.TouchEnabled
+local cursorPos = Vector2.new(0, 0)
+
+if isMobile then
+	UserInputService.TouchMoved:Connect(function(t, p)
+		if not p then cursorPos = t.Position end
+	end)
+	UserInputService.TouchStarted:Connect(function(t, p)
+		if not p then cursorPos = t.Position end
+	end)
+else
+	UserInputService.InputChanged:Connect(function(inp)
+		if inp.UserInputType == Enum.UserInputType.MouseMovement then
+			cursorPos = inp.Position
+		end
+	end)
+end
+
+local configName = "Sight_Config.json"
+local config = {}
+
+local function SaveConfig()
+	if writefile then
+		local s, r = pcall(function() return HttpService:JSONEncode(config) end)
+		if s then writefile(configName, r) end
+	end
+end
+
+local function LoadConfig()
+	if isfile and isfile(configName) then
+		local s, r = pcall(function() return HttpService:JSONDecode(readfile(configName)) end)
+		if s and type(r) == "table" then
+			for k, v in pairs(r) do config[k] = v end
+		end
+	end
+end
+
+LoadConfig()
+
+local palette = {
+	bg        = Color3.fromRGB(18, 18, 18),
+	sidebar   = Color3.fromRGB(22, 22, 22),
+	dark      = Color3.fromRGB(26, 26, 26),
+	mid       = Color3.fromRGB(35, 35, 35),
+	rim       = Color3.fromRGB(45, 45, 45),
+	accent    = Color3.fromRGB(0, 255, 204),
+	accentOff = Color3.fromRGB(0, 150, 120),
+	bright    = Color3.fromRGB(250, 250, 250),
+	muted     = Color3.fromRGB(140, 140, 140),
+	danger    = Color3.fromRGB(255, 60, 80),
+}
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "SightPremium"
+gui.ResetOnSpawn = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+if syn and syn.protect_gui then
+	syn.protect_gui(gui)
+	gui.Parent = CoreGui
+elseif gethui then
+	gui.Parent = gethui()
+else
+	gui.Parent = CoreGui
+end
+
+local win = Instance.new("Frame")
+win.Name = "Window"
+win.Size = isMobile and UDim2.new(0, 290, 0, 360) or UDim2.new(0, 340, 0, 420)
+win.Position = isMobile and UDim2.new(0.5, -145, 0.5, -180) or UDim2.new(0.5, -170, 0.5, -210)
+win.BackgroundColor3 = palette.bg
+win.BorderSizePixel = 0
+win.ClipsDescendants = true
+win.Parent = gui
+Instance.new("UICorner", win).CornerRadius = UDim.new(0, 8)
+local winRim = Instance.new("UIStroke", win)
+winRim.Color = palette.rim
+winRim.Thickness = 1
+winRim.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+local bar = Instance.new("Frame")
+bar.Name = "TitleBar"
+bar.Size = UDim2.new(1, 0, 0, 45)
+bar.BackgroundColor3 = palette.sidebar
+bar.BorderSizePixel = 0
+bar.Parent = win
+Instance.new("UICorner", bar).CornerRadius = UDim.new(0, 8)
+
+local barDivide = Instance.new("Frame")
+barDivide.Size = UDim2.new(1, 0, 0, 1)
+barDivide.Position = UDim2.new(0, 0, 1, -1)
+barDivide.BackgroundColor3 = palette.rim
+barDivide.BorderSizePixel = 0
+barDivide.Parent = bar
+
+local titleLbl = Instance.new("TextLabel")
+titleLbl.Size = UDim2.new(1, -110, 1, 0)
+titleLbl.Position = UDim2.new(0, 18, 0, 0)
+titleLbl.BackgroundTransparency = 1
+titleLbl.Text = "sight"
+titleLbl.TextColor3 = palette.bright
+titleLbl.TextSize = 15
+titleLbl.Font = Enum.Font.GothamBold
+titleLbl.TextXAlignment = Enum.TextXAlignment.Left
+titleLbl.Parent = bar
+
+local versionLbl = Instance.new("TextLabel")
+versionLbl.Size = UDim2.new(0, 40, 1, 0)
+versionLbl.Position = UDim2.new(0, 68, 0, 0)
+versionLbl.BackgroundTransparency = 1
+versionLbl.Text = "v1.0"
+versionLbl.TextColor3 = palette.accent
+versionLbl.TextSize = 11
+versionLbl.Font = Enum.Font.GothamMedium
+versionLbl.TextXAlignment = Enum.TextXAlignment.Left
+versionLbl.Parent = bar
+
+local btnMin = Instance.new("TextButton")
+btnMin.Size = UDim2.new(0, 22, 0, 22)
+btnMin.Position = UDim2.new(1, -58, 0, 11)
+btnMin.BackgroundColor3 = palette.mid
+btnMin.Text = "–"
+btnMin.TextColor3 = palette.bright
+btnMin.TextSize = 13
+btnMin.Font = Enum.Font.GothamBold
+btnMin.BorderSizePixel = 0
+btnMin.Parent = bar
+Instance.new("UICorner", btnMin).CornerRadius = UDim.new(0, 4)
+local minRim = Instance.new("UIStroke", btnMin)
+minRim.Color = palette.rim
+minRim.Thickness = 1
+
+local btnClose = Instance.new("TextButton")
+btnClose.Size = UDim2.new(0, 22, 0, 22)
+btnClose.Position = UDim2.new(1, -30, 0, 11)
+btnClose.BackgroundColor3 = palette.danger
+btnClose.Text = "×"
+btnClose.TextColor3 = Color3.fromRGB(255, 255, 255)
+btnClose.TextSize = 14
+btnClose.Font = Enum.Font.GothamBold
+btnClose.BorderSizePixel = 0
+btnClose.Parent = bar
+Instance.new("UICorner", btnClose).CornerRadius = UDim.new(0, 4)
+
+local sidePanel = Instance.new("Frame")
+sidePanel.Name = "Sidebar"
+sidePanel.Size = UDim2.new(0, 95, 1, -45)
+sidePanel.Position = UDim2.new(0, 0, 0, 45)
+sidePanel.BackgroundColor3 = palette.sidebar
+sidePanel.BorderSizePixel = 0
+sidePanel.Parent = win
+
+local sideDivide = Instance.new("Frame")
+sideDivide.Size = UDim2.new(0, 1, 1, 0)
+sideDivide.Position = UDim2.new(1, -1, 0, 0)
+sideDivide.BackgroundColor3 = palette.rim
+sideDivide.BorderSizePixel = 0
+sideDivide.Parent = sidePanel
+
+local content = Instance.new("Frame")
+content.Name = "Content"
+content.Size = UDim2.new(1, -95, 1, -45)
+content.Position = UDim2.new(0, 95, 0, 45)
+content.BackgroundTransparency = 1
+content.BorderSizePixel = 0
+content.Parent = win
+
+local resizeBtn = Instance.new("TextButton")
+resizeBtn.Size = UDim2.new(0, 22, 0, 22)
+resizeBtn.Position = UDim2.new(1, -22, 1, -22)
+resizeBtn.BackgroundColor3 = palette.mid
+resizeBtn.Text = ""
+resizeBtn.AutoButtonColor = false
+resizeBtn.ZIndex = 10
+resizeBtn.BorderSizePixel = 0
+resizeBtn.Parent = win
+Instance.new("UICorner", resizeBtn).CornerRadius = UDim.new(0, 4)
+local resRim = Instance.new("UIStroke", resizeBtn)
+resRim.Color = palette.rim
+resRim.Thickness = 1
+
+local resizeDot = Instance.new("Frame")
+resizeDot.Size = UDim2.new(0, 8, 0, 8)
+resizeDot.Position = UDim2.new(1, -10, 1, -10)
+resizeDot.BackgroundColor3 = palette.accent
+resizeDot.BorderSizePixel = 0
+resizeDot.Parent = resizeBtn
+Instance.new("UICorner", resizeDot).CornerRadius = UDim.new(0, 2)
+
+local mobileBar = Instance.new("Frame")
+mobileBar.Size = UDim2.new(0, 115, 0, 34)
+mobileBar.Position = UDim2.new(0, 12, 0, 12)
+mobileBar.BackgroundTransparency = 1
+mobileBar.Parent = gui
+
+local btnMenuMobile = Instance.new("TextButton")
+btnMenuMobile.Size = UDim2.new(0, 52, 0, 30)
+btnMenuMobile.Position = UDim2.new(0, 0, 0, 0)
+btnMenuMobile.BackgroundColor3 = palette.bg
+btnMenuMobile.Text = "menu"
+btnMenuMobile.TextColor3 = palette.bright
+btnMenuMobile.TextSize = 12
+btnMenuMobile.Font = Enum.Font.GothamMedium
+btnMenuMobile.BorderSizePixel = 0
+btnMenuMobile.Parent = mobileBar
+Instance.new("UICorner", btnMenuMobile).CornerRadius = UDim.new(0, 6)
+local mmRim = Instance.new("UIStroke", btnMenuMobile)
+mmRim.Color = palette.rim
+mmRim.Thickness = 1
+
+local btnLockMobile = Instance.new("TextButton")
+btnLockMobile.Size = UDim2.new(0, 52, 0, 30)
+btnLockMobile.Position = UDim2.new(0, 58, 0, 0)
+btnLockMobile.BackgroundColor3 = palette.bg
+btnLockMobile.Text = "free"
+btnLockMobile.TextColor3 = palette.bright
+btnLockMobile.TextSize = 12
+btnLockMobile.Font = Enum.Font.GothamMedium
+btnLockMobile.BorderSizePixel = 0
+btnLockMobile.Parent = mobileBar
+Instance.new("UICorner", btnLockMobile).CornerRadius = UDim.new(0, 6)
+local mlRim = Instance.new("UIStroke", btnLockMobile)
+mlRim.Color = palette.rim
+mlRim.Thickness = 1
+
+local orbitHotBtn = Instance.new("TextButton")
+orbitHotBtn.Name = "OrbitHotkey"
+orbitHotBtn.Size = UDim2.new(0, 50, 0, 50)
+orbitHotBtn.Position = UDim2.new(0.84, 0, 0.5, -25)
+orbitHotBtn.BackgroundColor3 = palette.bg
+orbitHotBtn.Text = "orb"
+orbitHotBtn.TextColor3 = palette.muted
+orbitHotBtn.TextSize = 12
+orbitHotBtn.Font = Enum.Font.GothamBold
+orbitHotBtn.Visible = false
+orbitHotBtn.BorderSizePixel = 0
+orbitHotBtn.Parent = gui
+Instance.new("UICorner", orbitHotBtn).CornerRadius = UDim.new(0, 8)
+local ohRim = Instance.new("UIStroke", orbitHotBtn)
+ohRim.Color = palette.rim
+ohRim.Thickness = 1
+
+local tabs = {}
+local menuKeybind = Enum.KeyCode.RightShift
+local uiLocked = false
+
+local function addPadding(parent)
+	local f = Instance.new("Frame")
+	f.Size = UDim2.new(1, -20, 0, 20)
+	f.BackgroundTransparency = 1
+	f.BorderSizePixel = 0
+	f.LayoutOrder = 99999
+	f.Parent = parent
+end
+
+local function createTab(label, shortTag)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(1, 0, 0, 40)
+	btn.Position = UDim2.new(0, 0, 0, #tabs * 40)
+	btn.BackgroundColor3 = palette.sidebar
+	btn.Text = "[" .. shortTag .. "]  " .. label
+	btn.TextColor3 = palette.muted
+	btn.TextSize = 11
+	btn.Font = Enum.Font.GothamMedium
+	btn.BorderSizePixel = 0
+	btn.TextXAlignment = Enum.TextXAlignment.Left
+	btn.Parent = sidePanel
+	local bPad = Instance.new("UIPadding", btn)
+	bPad.PaddingLeft = UDim.new(0, 10)
+
+	local indicator = Instance.new("Frame")
+	indicator.Size = UDim2.new(0, 3, 1, 0)
+	indicator.BackgroundColor3 = palette.accent
+	indicator.BorderSizePixel = 0
+	indicator.Visible = false
+	indicator.Parent = btn
+	Instance.new("UICorner", indicator).CornerRadius = UDim.new(0, 2)
+
+	local frame = Instance.new("ScrollingFrame")
+	frame.Size = UDim2.new(1, 0, 1, 0)
+	frame.BackgroundTransparency = 1
+	frame.BorderSizePixel = 0
+	frame.ScrollBarThickness = 3
+	frame.ScrollBarImageColor3 = palette.accent
+	frame.Visible = false
+	frame.Parent = content
+
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0, 8)
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = frame
+
+	local pad = Instance.new("UIPadding")
+	pad.PaddingTop = UDim.new(0, 12)
+	pad.PaddingBottom = UDim.new(0, 12)
+	pad.Parent = frame
+
+	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+		frame.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 40)
+	end)
+
+	table.insert(tabs, {btn = btn, ind = indicator, frame = frame})
+
+	btn.MouseButton1Click:Connect(function()
+		for _, t in ipairs(tabs) do
+			t.ind.Visible = false
+			t.btn.BackgroundColor3 = palette.sidebar
+			t.btn.TextColor3 = palette.muted
+			t.frame.Visible = false
+		end
+		indicator.Visible = true
+		btn.BackgroundColor3 = palette.bg
+		btn.TextColor3 = palette.bright
+		frame.Visible = true
+	end)
+
+	if #tabs == 1 then
+		indicator.Visible = true
+		btn.BackgroundColor3 = palette.bg
+		btn.TextColor3 = palette.bright
+		frame.Visible = true
+	end
+
+	return frame
+end
+
+local function createSection(parent, title)
+	local f = Instance.new("Frame")
+	f.Size = UDim2.new(1, -20, 0, 24)
+	f.BackgroundColor3 = palette.dark
+	f.BorderSizePixel = 0
+	f.Parent = parent
+	Instance.new("UICorner", f).CornerRadius = UDim.new(0, 4)
+	local s = Instance.new("UIStroke", f)
+	s.Color = palette.rim
+	s.Thickness = 1
+
+	local lbl = Instance.new("TextLabel")
+	lbl.Size = UDim2.new(1, -16, 1, 0)
+	lbl.Position = UDim2.new(0, 12, 0, 0)
+	lbl.BackgroundTransparency = 1
+	lbl.Text = title:upper()
+	lbl.TextColor3 = palette.accent
+	lbl.TextSize = 10
+	lbl.Font = Enum.Font.GothamBold
+	lbl.TextXAlignment = Enum.TextXAlignment.Left
+	lbl.Parent = f
+end
+
+local function createToggle(parent, id, label, default, cb)
+	if config[id] ~= nil then default = config[id] else config[id] = default end
+	
+	local f = Instance.new("Frame")
+	f.Size = UDim2.new(1, -20, 0, 36)
+	f.BackgroundColor3 = palette.dark
+	f.BorderSizePixel = 0
+	f.Parent = parent
+	Instance.new("UICorner", f).CornerRadius = UDim.new(0, 4)
+	local fs = Instance.new("UIStroke", f)
+	fs.Color = palette.rim
+	fs.Thickness = 1
+
+	local lbl = Instance.new("TextLabel")
+	lbl.Size = UDim2.new(1, -65, 1, 0)
+	lbl.Position = UDim2.new(0, 12, 0, 0)
+	lbl.BackgroundTransparency = 1
+	lbl.Text = label
+	lbl.TextColor3 = palette.bright
+	lbl.TextSize = 12
+	lbl.Font = Enum.Font.GothamMedium
+	lbl.TextXAlignment = Enum.TextXAlignment.Left
+	lbl.Parent = f
+
+	local track = Instance.new("TextButton")
+	track.Size = UDim2.new(0, 32, 0, 16)
+	track.Position = UDim2.new(1, -44, 0.5, -8)
+	track.BackgroundColor3 = default and palette.accent or palette.mid
+	track.Text = ""
+	track.BorderSizePixel = 0
+	track.Parent = f
+	Instance.new("UICorner", track).CornerRadius = UDim.new(0, 8)
+	local ts = Instance.new("UIStroke", track)
+	ts.Color = default and palette.accent or palette.rim
+	ts.Thickness = 1
+
+	local dot = Instance.new("Frame")
+	dot.Size = UDim2.new(0, 12, 0, 12)
+	dot.Position = default and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
+	dot.BackgroundColor3 = palette.bright
+	dot.BorderSizePixel = 0
+	dot.Parent = track
+	Instance.new("UICorner", dot).CornerRadius = UDim.new(0, 6)
+
+	local on = default or false
+	local self_ = false
+
+	local function refresh(state)
+		if self_ then return end
+		on = state
+		config[id] = on
+		SaveConfig()
+		local c = on and palette.accent or palette.mid
+		local sc = on and palette.accent or palette.rim
+		local p = on and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
+		TweenService:Create(track, TweenInfo.new(0.15), {BackgroundColor3 = c}):Play()
+		TweenService:Create(ts, TweenInfo.new(0.15), {Color = sc}):Play()
+		TweenService:Create(dot, TweenInfo.new(0.15), {Position = p}):Play()
+		if cb then cb(on) end
+	end
+
+	track.MouseButton1Click:Connect(function() refresh(not on) end)
+	
+	if cb then cb(on) end
+
+	return {
+		Set = function(v)
+			self_ = true
+			on = v
+			config[id] = on
+			SaveConfig()
+			track.BackgroundColor3 = v and palette.accent or palette.mid
+			ts.Color = v and palette.accent or palette.rim
+			dot.Position = v and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
+			self_ = false
+		end,
+		Get = function() return on end
+	}
+end
+
+local function createSlider(parent, id, label, mn, mx, def, cb)
+	if config[id] ~= nil then def = config[id] else config[id] = def end
+	
+	local f = Instance.new("Frame")
+	f.Size = UDim2.new(1, -20, 0, 50)
+	f.BackgroundColor3 = palette.dark
+	f.BorderSizePixel = 0
+	f.Parent = parent
+	Instance.new("UICorner", f).CornerRadius = UDim.new(0, 4)
+	local fs = Instance.new("UIStroke", f)
+	fs.Color = palette.rim
+	fs.Thickness = 1
+
+	local lbl = Instance.new("TextLabel")
+	lbl.Size = UDim2.new(1, -70, 0, 24)
+	lbl.Position = UDim2.new(0, 12, 0, 4)
+	lbl.BackgroundTransparency = 1
+	lbl.Text = label
+	lbl.TextColor3 = palette.bright
+	lbl.TextSize = 12
+	lbl.Font = Enum.Font.GothamMedium
+	lbl.TextXAlignment = Enum.TextXAlignment.Left
+	lbl.Parent = f
+
+	local val = Instance.new("TextLabel")
+	val.Size = UDim2.new(0, 50, 0, 24)
+	val.Position = UDim2.new(1, -62, 0, 4)
+	val.BackgroundTransparency = 1
+	val.Text = tostring(def)
+	val.TextColor3 = palette.accent
+	val.TextSize = 12
+	val.Font = Enum.Font.GothamBold
+	val.TextXAlignment = Enum.TextXAlignment.Right
+	val.Parent = f
+
+	local track = Instance.new("Frame")
+	track.Size = UDim2.new(1, -24, 0, 4)
+	track.Position = UDim2.new(0, 12, 0, 36)
+	track.BackgroundColor3 = palette.mid
+	track.BorderSizePixel = 0
+	track.Parent = f
+	Instance.new("UICorner", track).CornerRadius = UDim.new(0, 2)
+
+	local fill = Instance.new("Frame")
+	fill.Size = UDim2.new((def - mn) / (mx - mn), 0, 1, 0)
+	fill.BackgroundColor3 = palette.accent
+	fill.BorderSizePixel = 0
+	fill.Parent = track
+	Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 2)
+
+	local handle = Instance.new("Frame")
+	handle.Size = UDim2.new(0, 10, 0, 14)
+	handle.Position = UDim2.new((def - mn) / (mx - mn), -5, 0.5, -7)
+	handle.BackgroundColor3 = palette.bright
+	handle.BorderSizePixel = 0
+	handle.Parent = track
+	Instance.new("UICorner", handle).CornerRadius = UDim.new(0, 3)
+	local hs = Instance.new("UIStroke", handle)
+	hs.Color = palette.rim
+	hs.Thickness = 1
+
+	local cur = def
+	local dragging = false
+
+	local function move(inp)
+		local rel = math.clamp((inp.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+		cur = math.floor(mn + (mx - mn) * rel)
+		val.Text = tostring(cur)
+		fill.Size = UDim2.new(rel, 0, 1, 0)
+		handle.Position = UDim2.new(rel, -5, 0.5, -7)
+		config[id] = cur
+		if cb then cb(cur) end
+	end
+
+	track.InputBegan:Connect(function(inp)
+		if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			move(inp)
+		end
+	end)
+	UserInputService.InputChanged:Connect(function(inp)
+		if dragging and (inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch) then
+			move(inp)
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(inp)
+		if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+			SaveConfig()
+		end
+	end)
+	
+	if cb then cb(cur) end
+
+	return {
+		Set = function(v)
+			cur = math.clamp(v, mn, mx)
+			config[id] = cur
+			SaveConfig()
+			local p = (cur - mn) / (mx - mn)
+			val.Text = tostring(cur)
+			fill.Size = UDim2.new(p, 0, 1, 0)
+			handle.Position = UDim2.new(p, -5, 0.5, -7)
+			if cb then cb(cur) end
+		end,
+		Get = function() return cur end
+	}
+end
+
+local function createDropdown(parent, id, label, opts, default, cb)
+	if config[id] ~= nil then default = config[id] else config[id] = default end
+	
+	local f = Instance.new("Frame")
+	f.Size = UDim2.new(1, -20, 0, 36)
+	f.BackgroundColor3 = palette.dark
+	f.BorderSizePixel = 0
+	f.ClipsDescendants = true
+	f.Parent = parent
+	Instance.new("UICorner", f).CornerRadius = UDim.new(0, 4)
+	local fs = Instance.new("UIStroke", f)
+	fs.Color = palette.rim
+	fs.Thickness = 1
+
+	local lbl = Instance.new("TextLabel")
+	lbl.Size = UDim2.new(0, 100, 0, 36)
+	lbl.Position = UDim2.new(0, 12, 0, 0)
+	lbl.BackgroundTransparency = 1
+	lbl.Text = label
+	lbl.TextColor3 = palette.bright
+	lbl.TextSize = 12
+	lbl.Font = Enum.Font.GothamMedium
+	lbl.TextXAlignment = Enum.TextXAlignment.Left
+	lbl.Parent = f
+
+	local sel = Instance.new("TextLabel")
+	sel.Size = UDim2.new(1, -150, 0, 36)
+	sel.Position = UDim2.new(0, 110, 0, 0)
+	sel.BackgroundTransparency = 1
+	sel.Text = default or opts[1]
+	sel.TextColor3 = palette.accent
+	sel.TextSize = 12
+	sel.Font = Enum.Font.GothamMedium
+	sel.TextXAlignment = Enum.TextXAlignment.Right
+	sel.Parent = f
+
+	local arrow = Instance.new("TextLabel")
+	arrow.Size = UDim2.new(0, 20, 0, 36)
+	arrow.Position = UDim2.new(1, -26, 0, 0)
+	arrow.BackgroundTransparency = 1
+	arrow.Text = "▼"
+	arrow.TextColor3 = palette.muted
+	arrow.TextSize = 10
+	arrow.Font = Enum.Font.Gotham
+	arrow.Parent = f
+
+	local optFrame = Instance.new("Frame")
+	optFrame.Size = UDim2.new(1, 0, 0, 0)
+	optFrame.Position = UDim2.new(0, 0, 0, 36)
+	optFrame.BackgroundColor3 = palette.sidebar
+	optFrame.BorderSizePixel = 0
+	optFrame.Parent = f
+	Instance.new("UIListLayout", optFrame)
+
+	local open = false
+	local chosen = default or opts[1]
+
+	local function toggle()
+		open = not open
+		local fh = open and (36 + #opts * 26) or 36
+		local oh = open and (#opts * 26) or 0
+		TweenService:Create(f, TweenInfo.new(0.15), {Size = UDim2.new(1, -20, 0, fh)}):Play()
+		TweenService:Create(optFrame, TweenInfo.new(0.15), {Size = UDim2.new(1, 0, 0, oh)}):Play()
+	end
+
+	for _, opt in ipairs(opts) do
+		local ob = Instance.new("TextButton")
+		ob.Size = UDim2.new(1, 0, 0, 26)
+		ob.BackgroundColor3 = palette.sidebar
+		ob.Text = "   " .. opt
+		ob.TextColor3 = palette.muted
+		ob.TextSize = 11
+		ob.Font = Enum.Font.GothamMedium
+		ob.BorderSizePixel = 0
+		ob.TextXAlignment = Enum.TextXAlignment.Left
+		ob.Parent = optFrame
+		ob.MouseButton1Click:Connect(function()
+			chosen = opt
+			config[id] = chosen
+			SaveConfig()
+			sel.Text = opt
+			toggle()
+			if cb then cb(opt) end
+		end)
+	end
+
+	local hit = Instance.new("TextButton")
+	hit.Size = UDim2.new(1, 0, 0, 36)
+	hit.BackgroundTransparency = 1
+	hit.Text = ""
+	hit.Parent = f
+	hit.MouseButton1Click:Connect(toggle)
+	
+	if cb then cb(chosen) end
+
+	return {
+		Set = function(v) 
+			chosen = v 
+			config[id] = chosen
+			SaveConfig()
+			sel.Text = v 
+			if cb then cb(v) end 
+		end,
+		Get = function() return chosen end
+	}
+end
+
+local function createKeybind(parent, id, label, defKey, cb)
+	local defKeyName = defKey.Name
+	if config[id] ~= nil then defKeyName = config[id] else config[id] = defKeyName end
+	local curKey = Enum.KeyCode[defKeyName] or defKey
+	
+	local f = Instance.new("Frame")
+	f.Size = UDim2.new(1, -20, 0, 36)
+	f.BackgroundColor3 = palette.dark
+	f.BorderSizePixel = 0
+	f.Parent = parent
+	Instance.new("UICorner", f).CornerRadius = UDim.new(0, 4)
+	local fs = Instance.new("UIStroke", f)
+	fs.Color = palette.rim
+	fs.Thickness = 1
+
+	local lbl = Instance.new("TextLabel")
+	lbl.Size = UDim2.new(1, -95, 1, 0)
+	lbl.Position = UDim2.new(0, 12, 0, 0)
+	lbl.BackgroundTransparency = 1
+	lbl.Text = label
+	lbl.TextColor3 = palette.bright
+	lbl.TextSize = 12
+	lbl.Font = Enum.Font.GothamMedium
+	lbl.TextXAlignment = Enum.TextXAlignment.Left
+	lbl.Parent = f
+
+	local kbtn = Instance.new("TextButton")
+	kbtn.Size = UDim2.new(0, 70, 0, 20)
+	kbtn.Position = UDim2.new(1, -82, 0.5, -10)
+	kbtn.BackgroundColor3 = palette.mid
+	kbtn.Text = curKey.Name
+	kbtn.TextColor3 = palette.accent
+	kbtn.TextSize = 11
+	kbtn.Font = Enum.Font.GothamBold
+	kbtn.BorderSizePixel = 0
+	kbtn.Parent = f
+	Instance.new("UICorner", kbtn).CornerRadius = UDim.new(0, 4)
+	local ks = Instance.new("UIStroke", kbtn)
+	ks.Color = palette.rim
+	ks.Thickness = 1
+
+	local listening = false
+
+	kbtn.MouseButton1Click:Connect(function()
+		listening = true
+		kbtn.Text = "..."
+		kbtn.TextColor3 = palette.bright
+	end)
+
+	UserInputService.InputBegan:Connect(function(inp, proc)
+		if listening and not proc and inp.UserInputType == Enum.UserInputType.Keyboard then
+			curKey = inp.KeyCode
+			config[id] = curKey.Name
+			SaveConfig()
+			kbtn.Text = curKey.Name
+			kbtn.TextColor3 = palette.accent
+			listening = false
+			if cb then cb(curKey) end
+		end
+	end)
+	
+	if cb then cb(curKey) end
+
+	return {
+		Get = function() return curKey end,
+		Set = function(k) 
+			curKey = k 
+			config[id] = curKey.Name
+			SaveConfig()
+			kbtn.Text = k.Name 
+		end
+	}
+end
+
+local function createLabel(parent, txt)
+	local lbl = Instance.new("TextLabel")
+	lbl.Size = UDim2.new(1, -20, 0, 26)
+	lbl.BackgroundColor3 = palette.dark
+	lbl.Text = txt
+	lbl.TextColor3 = palette.muted
+	lbl.TextSize = 11
+	lbl.Font = Enum.Font.GothamMedium
+	lbl.BorderSizePixel = 0
+	lbl.TextXAlignment = Enum.TextXAlignment.Left
+	lbl.Parent = parent
+	Instance.new("UICorner", lbl).CornerRadius = UDim.new(0, 4)
+	local ls = Instance.new("UIStroke", lbl)
+	ls.Color = palette.rim
+	ls.Thickness = 1
+	local p = Instance.new("UIPadding", lbl)
+	p.PaddingLeft = UDim.new(0, 12)
+end
+
+local dragging = false
+local dragStart, dragOrigin
+
+bar.InputBegan:Connect(function(inp)
+	if uiLocked then return end
+	if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = inp.Position
+		dragOrigin = win.Position
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(inp)
+	if dragging and (inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch) then
+		local d = inp.Position - dragStart
+		win.Position = UDim2.new(dragOrigin.X.Scale, dragOrigin.X.Offset + d.X, dragOrigin.Y.Scale, dragOrigin.Y.Offset + d.Y)
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(inp)
+	if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+		dragging = false
+	end
+end)
+
+local resizing = false
+local resizeStart, resizeOrigin
+
+resizeBtn.InputBegan:Connect(function(inp)
+	if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+		resizing = true
+		resizeStart = inp.Position
+		resizeOrigin = win.Size
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(inp)
+	if resizing and (inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch) then
+		local d = inp.Position - resizeStart
+		local minW = isMobile and 250 or 280
+		local minH = isMobile and 300 or 330
+		win.Size = UDim2.new(0, math.clamp(resizeOrigin.X.Offset + d.X, minW, 700), 0, math.clamp(resizeOrigin.Y.Offset + d.Y, minH, 700))
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(inp)
+	if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+		resizing = false
+	end
+end)
+
+local minimized = false
+btnMin.MouseButton1Click:Connect(function()
+	minimized = not minimized
+	local h = minimized and 45 or win.Size.Y.Offset
+	TweenService:Create(win, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, win.Size.X.Offset, 0, h)}):Play()
+end)
+
+btnClose.MouseButton1Click:Connect(function() gui:Destroy() end)
+
+btnMenuMobile.MouseButton1Click:Connect(function()
+	win.Visible = not win.Visible
+end)
+
+btnLockMobile.MouseButton1Click:Connect(function()
+	uiLocked = not uiLocked
+	btnLockMobile.Text = uiLocked and "locked" or "free"
+	btnLockMobile.TextColor3 = uiLocked and palette.danger or palette.bright
+end)
+
+local hotDragging = false
+local hotDragStart, hotDragOrigin
+
+orbitHotBtn.InputBegan:Connect(function(inp)
+	if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+		hotDragging = true
+		hotDragStart = inp.Position
+		hotDragOrigin = orbitHotBtn.Position
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(inp)
+	if hotDragging and (inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch) then
+		local d = inp.Position - hotDragStart
+		orbitHotBtn.Position = UDim2.new(hotDragOrigin.X.Scale, hotDragOrigin.X.Offset + d.X, hotDragOrigin.Y.Scale, hotDragOrigin.Y.Offset + d.Y)
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(inp)
+	if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+		if hotDragging then
+			local moved = (inp.Position - hotDragStart).Magnitude
+			if moved < 5 then
+				hotDragging = false
+				return
+			end
+		end
+		hotDragging = false
+	end
+end)
+
+local orbitTab = createTab("Orbit", "ORB")
+local settingsTab = createTab("Settings", "CFG")
+
+local orbitOn = false
+local aimOn = false
+local stickyOn = false
+local wallOn = false
+local deflectOn = false
+local hotkeyVisible = false
+local orbitTarget = nil
+local orbitDist = 10
+local orbitSpd = 2
+local orbitCurv = 0
+local orbitAng = 0
+local orbitMode = "Distance"
+local orbitKey = Enum.KeyCode.C
+local orbitConn = nil
+local orbitType = "Circle"
+
+local randomOrbitData = {
+	dirTimer = 0,
+	dirInterval = math.random(3, 8),
+	direction = 1,
+	wobbleAng = 0,
+	wobbleSpeed = 0,
+	spiralPhase = 0,
+}
+
+local function pickNewRandomDir()
+	randomOrbitData.direction = (math.random() > 0.5) and 1 or -1
+	randomOrbitData.dirInterval = math.random(3, 9) + math.random()
+	randomOrbitData.dirTimer = 0
+	randomOrbitData.wobbleSpeed = math.random(30, 80) / 100
+end
+
+local function isDeflecting(player)
+	if not player or not player.Character then return false end
+	for _, v in ipairs(player.Character:GetChildren()) do
+		if v:IsA("Tool") then
+			local n = v.Name:lower()
+			if n:find("deflect") or n:find("riot") or n:find("shield") then return true end
+		end
+	end
+	local bp = player:FindFirstChild("Backpack")
+	if bp then
+		for _, v in ipairs(bp:GetChildren()) do
+			local n = v.Name:lower()
+			if n:find("deflect") or n:find("riot") or n:find("shield") then return true end
+		end
+	end
+	return false
+end
+
+local function canSee(part)
+	if not part or not lp.Character then return false end
+	local origin = cam.CFrame.Position
+	local dir = part.Position - origin
+	local rp = RaycastParams.new()
+	rp.FilterType = Enum.RaycastFilterType.Exclude
+	rp.FilterDescendantsInstances = {lp.Character, cam}
+	rp.IgnoreWater = true
+	local res = workspace:Raycast(origin, dir, rp)
+	if res and res.Instance:IsDescendantOf(part.Parent) then return true end
+	return not res
+end
+
+local function getByDistance()
+	local root = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
+	if not root then return nil end
+	local closest, best = nil, math.huge
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= lp and p.Character then
+			local r = p.Character:FindFirstChild("HumanoidRootPart")
+			local h = p.Character:FindFirstChildOfClass("Humanoid")
+			if r and h and h.Health > 0 then
+				if wallOn and not canSee(r) then continue end
+				if deflectOn and isDeflecting(p) then continue end
+				local d = (r.Position - root.Position).Magnitude
+				if d < best then best = d closest = p end
+			end
+		end
+	end
+	return closest
+end
+
+local function getByScreen()
+	local closest, best = nil, math.huge
+	local screenCenter = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2)
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= lp and p.Character then
+			local head = p.Character:FindFirstChild("Head")
+			local h = p.Character:FindFirstChildOfClass("Humanoid")
+			if head and h and h.Health > 0 then
+				if wallOn and not canSee(head) then continue end
+				if deflectOn and isDeflecting(p) then continue end
+				local sp, onScreen = cam:WorldToViewportPoint(head.Position)
+				if onScreen then
+					local d = (Vector2.new(sp.X, sp.Y) - screenCenter).Magnitude
+					if d < best then best = d closest = p end
+				end
+			end
+		end
+	end
+	return closest
+end
+
+local function getByHealth()
+	local closest, best = nil, math.huge
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= lp and p.Character then
+			local r = p.Character:FindFirstChild("HumanoidRootPart")
+			local h = p.Character:FindFirstChildOfClass("Humanoid")
+			if r and h and h.Health > 0 then
+				if wallOn and not canSee(r) then continue end
+				if deflectOn and isDeflecting(p) then continue end
+				if h.Health < best then best = h.Health closest = p end
+			end
+		end
+	end
+	return closest
+end
+
+local function resolveTarget()
+	if stickyOn and orbitTarget and orbitTarget.Character then
+		local h = orbitTarget.Character:FindFirstChildOfClass("Humanoid")
+		local r = orbitTarget.Character:FindFirstChild("HumanoidRootPart")
+		if h and h.Health > 0 and r then return orbitTarget end
+	end
+	if orbitMode == "Distance" then
+		return getByDistance()
+	elseif orbitMode == "Screen Center" then
+		return getByScreen()
+	elseif orbitMode == "Lowest HP" then
+		return getByHealth()
+	end
+end
+
+local function aimAtTarget()
+	if orbitTarget and orbitTarget.Character then
+		local r = orbitTarget.Character:FindFirstChild("HumanoidRootPart")
+		local h = orbitTarget.Character:FindFirstChildOfClass("Humanoid")
+		if r and h and h.Health > 0 then
+			cam.CFrame = CFrame.lookAt(cam.CFrame.Position, r.Position)
+		end
+	end
+end
+
+local function startOrbit()
+	if orbitConn then orbitConn:Disconnect() orbitConn = nil end
+	if not orbitOn then return end
+	pickNewRandomDir()
+
+	orbitConn = RunService.RenderStepped:Connect(function(dt)
+		if not orbitOn then return end
+		local char = lp.Character
+		if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+
+		orbitTarget = resolveTarget()
+		if not orbitTarget or not orbitTarget.Character then return end
+
+		local root = orbitTarget.Character:FindFirstChild("HumanoidRootPart")
+		if not root then return end
+
+		local tPos = root.Position
+		local myPos
+
+		if orbitType == "Circle" then
+			orbitAng = orbitAng + (orbitSpd * 0.05)
+			local ox = math.cos(orbitAng) * orbitDist
+			local oz = math.sin(orbitAng) * orbitDist
+			myPos = Vector3.new(tPos.X + ox, tPos.Y, tPos.Z + oz)
+
+		elseif orbitType == "Random" then
+			randomOrbitData.dirTimer = randomOrbitData.dirTimer + dt
+			if randomOrbitData.dirTimer >= randomOrbitData.dirInterval then
+				pickNewRandomDir()
+			end
+			randomOrbitData.wobbleAng = randomOrbitData.wobbleAng + randomOrbitData.wobbleSpeed * dt
+			local wobble = math.sin(randomOrbitData.wobbleAng) * 0.3
+			orbitAng = orbitAng + (orbitSpd * 0.05 * randomOrbitData.direction) + wobble
+			local ox = math.cos(orbitAng) * orbitDist
+			local oz = math.sin(orbitAng) * orbitDist
+			myPos = Vector3.new(tPos.X + ox, tPos.Y, tPos.Z + oz)
+
+		elseif orbitType == "Figure8" then
+			orbitAng = orbitAng + (orbitSpd * 0.04)
+			local t = orbitAng
+			local scale = orbitDist
+			local ox = scale * math.sin(t)
+			local oz = scale * math.sin(t) * math.cos(t)
+			myPos = Vector3.new(tPos.X + ox, tPos.Y, tPos.Z + oz)
+
+		elseif orbitType == "Spiral" then
+			orbitAng = orbitAng + (orbitSpd * 0.05)
+			randomOrbitData.spiralPhase = randomOrbitData.spiralPhase + dt * 0.4
+			local pulseDist = orbitDist + math.sin(randomOrbitData.spiralPhase) * (orbitDist * 0.4)
+			local ox = math.cos(orbitAng) * pulseDist
+			local oz = math.sin(orbitAng) * pulseDist
+			myPos = Vector3.new(tPos.X + ox, tPos.Y, tPos.Z + oz)
+
+		elseif orbitType == "Vertical" then
+			orbitAng = orbitAng + (orbitSpd * 0.05)
+			local ox = math.cos(orbitAng) * orbitDist
+			local oy = math.sin(orbitAng) * orbitDist
+			myPos = Vector3.new(tPos.X + ox, tPos.Y + oy, tPos.Z)
+
+		else
+			orbitAng = orbitAng + (orbitSpd * 0.05)
+			local ox = math.cos(orbitAng) * orbitDist
+			local oz = math.sin(orbitAng) * orbitDist
+			myPos = Vector3.new(tPos.X + ox, tPos.Y, tPos.Z + oz)
+		end
+
+		local look = CFrame.lookAt(myPos, tPos)
+		local rV = look.RightVector
+		local uV = look.UpVector
+		local fV = look.LookVector
+
+		local rad = math.rad(orbitCurv)
+		local c, s = math.cos(rad), math.sin(rad)
+		local rr = rV * c + uV * s
+		local ru = uV * c - rV * s
+		local rl = Vector3.new(-fV.X, -fV.Y, -fV.Z)
+
+		local cf = CFrame.fromMatrix(myPos, rr, ru, rl)
+		char.HumanoidRootPart.CFrame = cf
+		char.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
+
+		if aimOn then aimAtTarget() end
+	end)
+end
+
+local function toggleOrbit(forced)
+	if forced ~= nil then
+		orbitOn = forced
+	else
+		orbitOn = not orbitOn
+	end
+
+	if not orbitOn then orbitTarget = nil end
+
+	if _G.orbitToggleObj then
+		_G.orbitToggleObj:Set(orbitOn)
+	end
+
+	orbitHotBtn.BackgroundColor3 = orbitOn and palette.accent or palette.bg
+	orbitHotBtn.TextColor3 = orbitOn and palette.bg or palette.muted
+
+	if orbitOn then
+		startOrbit()
+	else
+		if orbitConn then orbitConn:Disconnect() orbitConn = nil end
+	end
+end
+
+orbitHotBtn.InputEnded:Connect(function(inp)
+	if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+		if not hotDragging then
+			local moved = (inp.Position - (hotDragStart or inp.Position)).Magnitude
+			if moved < 6 then
+				toggleOrbit()
+			end
+		end
+	end
+end)
+
+orbitHotBtn.MouseButton1Click:Connect(function()
+	if hotDragging then return end
+	toggleOrbit()
+end)
+
+createSection(orbitTab, "Orbit Settings")
+
+_G.orbitToggleObj = createToggle(orbitTab, "OrbitEnabled", "Orbit Enabled", false, function(s)
+	if orbitOn ~= s then toggleOrbit(s) end
+end)
+
+createToggle(orbitTab, "MobileHotkey", "Mobile Hotkey", false, function(s)
+	hotkeyVisible = s
+	orbitHotBtn.Visible = s
+end)
+
+createToggle(orbitTab, "AimbotOrbit", "Aimbot While Orbit", false, function(s)
+	aimOn = s
+end)
+
+createToggle(orbitTab, "StickyOrbit", "Sticky Orbit", false, function(s)
+	stickyOn = s
+	if not s then orbitTarget = nil end
+end)
+
+createToggle(orbitTab, "WallCheck", "Wall Check", false, function(s) wallOn = s end)
+createToggle(orbitTab, "DeflectCheck", "Deflect Check", false, function(s) deflectOn = s end)
+
+createSection(orbitTab, "Orbit Config")
+
+createKeybind(orbitTab, "OrbitKey", "Orbit Keybind", Enum.KeyCode.C, function(k) orbitKey = k end)
+createSlider(orbitTab, "OrbitSpeed", "Orbit Speed", 1, 100, 2, function(v) orbitSpd = v end)
+createSlider(orbitTab, "OrbitDist", "Orbit Distance", 3, 60, 10, function(v) orbitDist = v end)
+createSlider(orbitTab, "OrbitCurve", "Orbit Curve", -180, 180, 0, function(v) orbitCurv = v end)
+
+createDropdown(orbitTab, "TargetMode", "Target Mode", {"Distance", "Screen Center", "Lowest HP"}, "Distance", function(v)
+	orbitMode = v
+end)
+
+createDropdown(orbitTab, "OrbitType", "Orbit Type", {"Circle", "Random", "Figure8", "Spiral", "Vertical"}, "Circle", function(v)
+	orbitType = v
+	if orbitOn then startOrbit() end
+end)
+
+addPadding(orbitTab)
+
+createSection(settingsTab, "Menu")
+createKeybind(settingsTab, "MenuKey", "Menu Keybind", Enum.KeyCode.RightShift, function(k) menuKeybind = k end)
+createSection(settingsTab, "Info")
+createLabel(settingsTab, "Sight Premium  v1.0")
+addPadding(settingsTab)
+
+UserInputService.InputBegan:Connect(function(inp, proc)
+	if proc then return end
+	if inp.KeyCode == menuKeybind then
+		win.Visible = not win.Visible
+	elseif inp.KeyCode == orbitKey then
+		toggleOrbit()
+	end
+end)
