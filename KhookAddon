@@ -992,7 +992,7 @@ end
 
 local function aimAtTarget()
 	if orbitTarget and orbitTarget.Character then
-		local r = orbitTarget.Character:FindFirstChild("HumanoidRootPart")
+		local r = orbitTarget.Character:FindFirstChild("Head")
 		local h = orbitTarget.Character:FindFirstChildOfClass("Humanoid")
 		if r and h and h.Health > 0 then
 			cam.CFrame = CFrame.lookAt(cam.CFrame.Position, r.Position)
