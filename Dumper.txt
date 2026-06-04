@@ -1,0 +1,88 @@
+local Players = game:GetService("Players")
+local lplr = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
+
+-- Table to store dumped code
+local dumpedCode = ""
+
+-- Hook loadstring to intercept Prometheus code
+local oldLoadstring = loadstring
+getgenv().loadstring = function(src, chunkname)
+    if type(src) == "string" and #src > 200 then
+        dumpedCode = src
+        warn("Prometheus code dumped")
+        -- Save to file if executor supports it
+        if writefile then
+            writefile("prometheus_dump.lua", src)
+        end
+    end
+    return oldLoadstring(src, chunkname)
+end
+
+-- Create GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "PrometheusDumperGUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = lplr:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 500, 0, 300)
+frame.Position = UDim2.new(0.5, -250, 0.5, -150)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BorderSizePixel = 0
+frame.Parent = screenGui
+frame.Active = true
+frame.Draggable = true
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 30)
+title.Position = UDim2.new(0, 0, 0, 0)
+title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+title.Text = "Prometheus Dump Output"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 20
+title.Parent = frame
+
+local outputBox = Instance.new("TextBox")
+outputBox.Size = UDim2.new(1, -20, 1, -80)
+outputBox.Position = UDim2.new(0, 10, 0, 40)
+outputBox.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+outputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+outputBox.Font = Enum.Font.Code
+outputBox.TextSize = 14
+outputBox.TextWrapped = true
+outputBox.ClearTextOnFocus = false
+outputBox.Text = "Waiting for dump..."
+outputBox.MultiLine = true
+outputBox.Parent = frame
+
+local copyButton = Instance.new("TextButton")
+copyButton.Size = UDim2.new(0, 150, 0, 30)
+copyButton.Position = UDim2.new(0.5, -75, 1, -40)
+copyButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+copyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+copyButton.Font = Enum.Font.SourceSansBold
+copyButton.TextSize = 18
+copyButton.Text = "Copy Output"
+copyButton.Parent = frame
+
+copyButton.MouseButton1Click:Connect(function()
+    if setclipboard then
+        setclipboard(dumpedCode)
+        outputBox.Text = "Copied to clipboard!"
+    else
+        outputBox.Text = "Executor does not support clipboard."
+    end
+end)
+
+-- Update GUI when dump happens
+RunService.RenderStepped:Connect(function()
+    if dumpedCode ~= "" and outputBox.Text ~= dumpedCode then
+        outputBox.Text = dumpedCode
+    end
+end)
+
+warn("Prometheus Dumper GUI ready. Execute your obfuscated script now.")
