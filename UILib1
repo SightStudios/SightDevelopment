@@ -1,0 +1,728 @@
+--[[
+    Protection GUI Library
+    A compact, animated Roblox hub UI with Script and Game tabs.
+    
+    Usage:
+        local Protection = require(script.Protection)
+        Protection:Initialize()
+    
+    Or paste directly into a LocalScript under StarterPlayerScripts.
+--]]
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Services
+-- ─────────────────────────────────────────────────────────────────────────────
+local Players          = game:GetService("Players")
+local TweenService     = game:GetService("TweenService")
+local TeleportService  = game:GetService("TeleportService")
+local RunService       = game:GetService("RunService")
+local MarketplaceService = game:GetService("MarketplaceService")
+local UserInputService = game:GetService("UserInputService")
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Constants
+-- ─────────────────────────────────────────────────────────────────────────────
+local HUB_VERSION  = "v1.0.0"
+local ACCENT_COLOR = Color3.fromRGB(99, 102, 241)   -- indigo accent
+local BG_DARK      = Color3.fromRGB(19, 19, 20)     -- #131314
+local BG_PANEL     = Color3.fromRGB(28, 28, 30)     -- #1c1c1e
+local BG_ELEM      = Color3.fromRGB(38, 38, 42)     -- element background
+local BG_HOVER     = Color3.fromRGB(52, 52, 58)     -- hover state
+local TEXT_WHITE   = Color3.fromRGB(255, 255, 255)
+local TEXT_MUTED   = Color3.fromRGB(161, 161, 164)  -- #A1A1A4
+local TEXT_DIM     = Color3.fromRGB(100, 100, 106)
+local RED_COLOR    = Color3.fromRGB(239,  68,  68)
+local GREEN_COLOR  = Color3.fromRGB( 34, 197,  94)
+
+-- Supported scripts per game (placeId -> list of script entries)
+local SCRIPT_DATA = {
+    {
+        gameName = "Blox Fruits",
+        placeId  = 2753915549,
+        scripts  = {
+            {
+                name      = "Main Script",
+                changelog = "- Auto Farm\n- Devil Fruit Sniper\n- Sea Beast Killer",
+                execute   = function() print("[Protection] Blox Fruits Main loaded") end,
+            },
+            {
+                name      = "Auto Quest",
+                changelog = "- Faster quest loop\n- Anti-AFK support",
+                execute   = function() print("[Protection] Blox Fruits AutoQuest loaded") end,
+            },
+        },
+    },
+    {
+        gameName = "Adopt Me!",
+        placeId  = 920587237,
+        scripts  = {
+            {
+                name      = "Auto Farm",
+                changelog = "- Pet auto-hatch\n- Money grinder",
+                execute   = function() print("[Protection] Adopt Me! AutoFarm loaded") end,
+            },
+        },
+    },
+    {
+        gameName = "Arsenal",
+        placeId  = 286090429,
+        scripts  = {
+            {
+                name      = "Aimbot Assist",
+                changelog = "- Smooth aim assist\n- Silent aim toggle",
+                execute   = function() print("[Protection] Arsenal Aimbot loaded") end,
+            },
+        },
+    },
+}
+
+-- Game teleport list (sorted alphabetically below)
+local GAME_LIST = {
+    { name = "Adopt Me!",       placeId = 920587237   },
+    { name = "Arsenal",         placeId = 286090429   },
+    { name = "Blox Fruits",     placeId = 2753915549  },
+    { name = "Brookhaven RP",   placeId = 4924922222  },
+    { name = "Murder Mystery 2",placeId = 142823291   },
+    { name = "Pet Simulator X", placeId = 6284583030  },
+    { name = "Royale High",     placeId = 735030788   },
+    { name = "Tower of Hell",   placeId = 1962086868  },
+}
+-- Sort alphabetically
+table.sort(GAME_LIST, function(a, b) return a.name < b.name end)
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Tween helpers
+-- ─────────────────────────────────────────────────────────────────────────────
+local function tween(obj, props, duration, style, dir)
+    local info = TweenInfo.new(
+        duration or 0.25,
+        style     or Enum.EasingStyle.Quad,
+        dir       or Enum.EasingDirection.Out
+    )
+    local t = TweenService:Create(obj, info, props)
+    t:Play()
+    return t
+end
+
+local function tweenCubic(obj, props, duration)
+    return tween(obj, props, duration or 0.3, Enum.EasingStyle.Cubic, Enum.EasingDirection.InOut)
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Instance factory helpers
+-- ─────────────────────────────────────────────────────────────────────────────
+local function make(class, props, parent)
+    local inst = Instance.new(class)
+    for k, v in pairs(props) do
+        inst[k] = v
+    end
+    if parent then inst.Parent = parent end
+    return inst
+end
+
+local function corner(radius, parent)
+    return make("UICorner", { CornerRadius = UDim.new(0, radius) }, parent)
+end
+
+local function padding(top, right, bottom, left, parent)
+    return make("UIPadding", {
+        PaddingTop    = UDim.new(0, top    or 0),
+        PaddingRight  = UDim.new(0, right  or 0),
+        PaddingBottom = UDim.new(0, bottom or 0),
+        PaddingLeft   = UDim.new(0, left   or 0),
+    }, parent)
+end
+
+local function listLayout(dir, spacing, halign, parent)
+    return make("UIListLayout", {
+        FillDirection       = dir     or Enum.FillDirection.Vertical,
+        Padding             = UDim.new(0, spacing or 6),
+        HorizontalAlignment = halign  or Enum.HorizontalAlignment.Left,
+        SortOrder           = Enum.SortOrder.LayoutOrder,
+    }, parent)
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Button micro-interaction wiring
+-- ─────────────────────────────────────────────────────────────────────────────
+local function wireButton(btn, normalColor, hoverColor, callback)
+    btn.MouseEnter:Connect(function()
+        tween(btn, { BackgroundColor3 = hoverColor or BG_HOVER }, 0.15)
+    end)
+    btn.MouseLeave:Connect(function()
+        tween(btn, { BackgroundColor3 = normalColor }, 0.15)
+    end)
+    btn.MouseButton1Down:Connect(function()
+        tween(btn, { Size = UDim2.new(
+            btn.Size.X.Scale, btn.Size.X.Offset - 2,
+            btn.Size.Y.Scale, btn.Size.Y.Offset - 2
+        )}, 0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+    end)
+    btn.MouseButton1Up:Connect(function()
+        tween(btn, { Size = UDim2.new(
+            btn.Size.X.Scale, btn.Size.X.Offset + 2,
+            btn.Size.Y.Scale, btn.Size.Y.Offset + 2
+        )}, 0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    end)
+    if callback then
+        btn.MouseButton1Click:Connect(callback)
+    end
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Main initialization
+-- ─────────────────────────────────────────────────────────────────────────────
+local Protection = {}
+
+function Protection:Initialize()
+
+    local localPlayer = Players.LocalPlayer
+    local playerGui   = localPlayer:WaitForChild("PlayerGui")
+    local placeName   = "Unknown"
+    pcall(function()
+        placeName = MarketplaceService:GetProductInfo(game.PlaceId).Name
+    end)
+
+    -- ── ScreenGui ──────────────────────────────────────────────────────────
+    local screenGui = make("ScreenGui", {
+        Name                   = "ProtectionHub",
+        ResetOnSpawn           = false,
+        ZIndexBehavior         = Enum.ZIndexBehavior.Sibling,
+        DisplayOrder           = 999,
+    }, playerGui)
+
+    -- ── Main Window Frame ──────────────────────────────────────────────────
+    -- Compact: 340 wide × 440 tall, centered on screen
+    local mainFrame = make("Frame", {
+        Name                  = "MainFrame",
+        Size                  = UDim2.new(0, 340, 0, 440),
+        Position              = UDim2.new(0.5, -170, 0.5, -220),
+        BackgroundColor3      = BG_DARK,
+        BackgroundTransparency= 0.15,
+        BorderSizePixel       = 0,
+    }, screenGui)
+    corner(12, mainFrame)
+    make("UIStroke", { Color = Color3.fromRGB(60, 60, 68), Thickness = 1 }, mainFrame)
+
+    -- Entry animation: scale up from 0.8, fade in
+    mainFrame.Size = UDim2.new(0, 272, 0, 352)      -- 80 % of final
+    mainFrame.BackgroundTransparency = 1
+    tweenCubic(mainFrame, {
+        Size                  = UDim2.new(0, 340, 0, 440),
+        BackgroundTransparency= 0.15,
+    }, 0.4)
+
+    -- ── Left Column (120 px wide) ──────────────────────────────────────────
+    local leftCol = make("Frame", {
+        Name             = "LeftColumn",
+        Size             = UDim2.new(0, 120, 1, 0),
+        Position         = UDim2.new(0, 0, 0, 0),
+        BackgroundColor3 = BG_PANEL,
+        BackgroundTransparency = 0.1,
+        BorderSizePixel  = 0,
+    }, mainFrame)
+    -- Rounded only on the left side – apply to full frame then clip via parent
+    corner(12, leftCol)
+    -- Mask right corners by overlay
+    make("Frame", {
+        Size             = UDim2.new(0, 12, 1, 0),
+        Position         = UDim2.new(1, -12, 0, 0),
+        BackgroundColor3 = BG_PANEL,
+        BackgroundTransparency = 0.1,
+        BorderSizePixel  = 0,
+        ZIndex           = 2,
+    }, leftCol)
+
+    -- Header text (also the drag handle)
+    local header = make("TextLabel", {
+        Name             = "Header",
+        Size             = UDim2.new(1, 0, 0, 44),
+        Position         = UDim2.new(0, 0, 0, 0),
+        BackgroundTransparency = 1,
+        Text             = "Protection",
+        TextColor3       = TEXT_WHITE,
+        Font             = Enum.Font.GothamBold,
+        TextSize         = 15,
+        TextXAlignment   = Enum.TextXAlignment.Center,
+        ZIndex           = 3,
+    }, leftCol)
+
+    -- Divider under header
+    make("Frame", {
+        Size             = UDim2.new(0.8, 0, 0, 1),
+        Position         = UDim2.new(0.1, 0, 0, 44),
+        BackgroundColor3 = Color3.fromRGB(55, 55, 62),
+        BorderSizePixel  = 0,
+    }, leftCol)
+
+    -- ── Tab Buttons ────────────────────────────────────────────────────────
+    local tabContainer = make("Frame", {
+        Name             = "Tabs",
+        Size             = UDim2.new(1, 0, 0, 90),
+        Position         = UDim2.new(0, 0, 0, 52),
+        BackgroundTransparency = 1,
+    }, leftCol)
+    listLayout(Enum.FillDirection.Vertical, 4, Enum.HorizontalAlignment.Center, tabContainer)
+    padding(4, 8, 4, 8, tabContainer)
+
+    local function makeTabButton(labelText, order)
+        local btn = make("TextButton", {
+            Name             = "Tab_" .. labelText,
+            Size             = UDim2.new(1, 0, 0, 34),
+            BackgroundColor3 = BG_ELEM,
+            BorderSizePixel  = 0,
+            Text             = labelText,
+            TextColor3       = TEXT_MUTED,
+            Font             = Enum.Font.GothamSemibold,
+            TextSize         = 13,
+            LayoutOrder      = order,
+            AutoButtonColor  = false,
+        }, tabContainer)
+        corner(8, btn)
+        return btn
+    end
+
+    local tabScript = makeTabButton("Script", 1)
+    local tabGame   = makeTabButton("Game",   2)
+
+    -- ── Avatar thumbnail ───────────────────────────────────────────────────
+    local avatarHolder = make("Frame", {
+        Name             = "AvatarHolder",
+        Size             = UDim2.new(0, 56, 0, 56),
+        Position         = UDim2.new(0.5, -28, 1, -72),
+        BackgroundColor3 = BG_ELEM,
+        BorderSizePixel  = 0,
+    }, leftCol)
+    corner(28, avatarHolder)   -- circle
+    make("UIStroke", { Color = ACCENT_COLOR, Thickness = 2 }, avatarHolder)
+
+    local avatarImg = make("ImageLabel", {
+        Name             = "AvatarImg",
+        Size             = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Image            = "",
+        ScaleType        = Enum.ScaleType.Fit,
+    }, avatarHolder)
+    corner(28, avatarImg)
+
+    -- Async load avatar
+    task.spawn(function()
+        local ok, url = pcall(function()
+            return Players:GetUserThumbnailAsync(
+                localPlayer.UserId,
+                Enum.ThumbnailType.HeadShot,
+                Enum.ThumbnailSize.Size100x100
+            )
+        end)
+        if ok then avatarImg.Image = url end
+    end)
+
+    -- Player name label under avatar
+    make("TextLabel", {
+        Name             = "PlayerName",
+        Size             = UDim2.new(1, 0, 0, 16),
+        Position         = UDim2.new(0, 0, 1, -14),
+        BackgroundTransparency = 1,
+        Text             = localPlayer.Name,
+        TextColor3       = TEXT_MUTED,
+        Font             = Enum.Font.Gotham,
+        TextSize         = 11,
+        TextXAlignment   = Enum.TextXAlignment.Center,
+    }, leftCol)
+
+    -- ── Right Content Area ─────────────────────────────────────────────────
+    local contentArea = make("Frame", {
+        Name             = "ContentArea",
+        Size             = UDim2.new(1, -128, 1, -8),
+        Position         = UDim2.new(0, 128, 0, 4),
+        BackgroundTransparency = 1,
+        ClipsDescendants = true,
+    }, mainFrame)
+
+    -- Close button (top-right of content area)
+    local closeBtn = make("TextButton", {
+        Name             = "CloseBtn",
+        Size             = UDim2.new(0, 24, 0, 24),
+        Position         = UDim2.new(1, -28, 0, 8),
+        BackgroundColor3 = Color3.fromRGB(60, 60, 68),
+        BorderSizePixel  = 0,
+        Text             = "✕",
+        TextColor3       = TEXT_MUTED,
+        Font             = Enum.Font.GothamBold,
+        TextSize         = 11,
+        AutoButtonColor  = false,
+        ZIndex           = 10,
+    }, mainFrame)
+    corner(12, closeBtn)
+    wireButton(closeBtn, Color3.fromRGB(60, 60, 68), RED_COLOR, function()
+        -- Close animation: shrink + fade
+        tweenCubic(mainFrame, {
+            Size                  = UDim2.new(0, 272, 0, 352),
+            BackgroundTransparency= 1,
+        }, 0.3):Completed:Connect(function()
+            screenGui:Destroy()
+        end)
+    end)
+
+    -- ─────────────────────────────────────────────────────────────────────
+    -- PANEL BUILDER
+    -- ─────────────────────────────────────────────────────────────────────
+    local function makePanel(name)
+        local p = make("Frame", {
+            Name             = name,
+            Size             = UDim2.new(1, -8, 1, -8),
+            Position         = UDim2.new(0, 4, 0, 4),
+            BackgroundTransparency = 1,
+            Visible          = false,
+            ClipsDescendants = true,
+        }, contentArea)
+        return p
+    end
+
+    local function showPanel(panel)
+        panel.BackgroundTransparency = 1
+        panel.Visible = true
+        tweenCubic(panel, { BackgroundTransparency = 0 }, 0.25)
+        -- Fake children transparency approach via CanvasGroup if available;
+        -- here we tween a cover frame
+    end
+
+    local function hidePanel(panel, cb)
+        tweenCubic(panel, { BackgroundTransparency = 1 }, 0.2):Completed:Connect(function()
+            panel.Visible = false
+            if cb then cb() end
+        end)
+    end
+
+    -- ─────────────────────────────────────────────────────────────────────
+    -- SCRIPT PANEL
+    -- ─────────────────────────────────────────────────────────────────────
+    local scriptPanel = makePanel("ScriptPanel")
+    scriptPanel.Visible = true   -- default view
+
+    -- Fade-cover frame for panel transitions
+    local function makeFadeCover(panel)
+        local cover = make("Frame", {
+            Size             = UDim2.new(1, 0, 1, 0),
+            BackgroundColor3 = BG_DARK,
+            BackgroundTransparency = 1,
+            BorderSizePixel  = 0,
+            ZIndex           = 20,
+        }, panel)
+        return cover
+    end
+
+    local scriptFade = makeFadeCover(scriptPanel)
+
+    -- ── Meta info section ──────────────────────────────────────────────────
+    local metaFrame = make("Frame", {
+        Name             = "Meta",
+        Size             = UDim2.new(1, 0, 0, 90),
+        BackgroundColor3 = BG_ELEM,
+        BorderSizePixel  = 0,
+    }, scriptPanel)
+    corner(10, metaFrame)
+    padding(8, 10, 8, 10, metaFrame)
+
+    local metaList = listLayout(Enum.FillDirection.Vertical, 3, Enum.HorizontalAlignment.Left, metaFrame)
+
+    local function metaLabel(txt, order)
+        return make("TextLabel", {
+            Name             = "ML" .. order,
+            Size             = UDim2.new(1, 0, 0, 15),
+            BackgroundTransparency = 1,
+            Text             = txt,
+            TextColor3       = TEXT_MUTED,
+            Font             = Enum.Font.Gotham,
+            TextSize         = 11,
+            TextXAlignment   = Enum.TextXAlignment.Left,
+            RichText         = true,
+            LayoutOrder      = order,
+        }, metaFrame)
+    end
+
+    metaLabel('<font color="#ffffff">User</font>  ' .. localPlayer.Name, 1)
+    metaLabel('<font color="#ffffff">Game</font>  ' .. placeName, 2)
+    metaLabel('<font color="#ffffff">Place</font> ' .. tostring(game.PlaceId), 3)
+    metaLabel('<font color="#ffffff">Ver</font>   ' .. HUB_VERSION, 4)
+
+    -- Live clock label
+    local clockLabel = metaLabel('<font color="#ffffff">Time</font>  --:--:--', 5)
+    task.spawn(function()
+        while screenGui.Parent do
+            local t = os.date("*t")
+            clockLabel.Text = string.format(
+                '<font color="#ffffff">Time</font>  %02d:%02d:%02d',
+                t.hour, t.min, t.sec
+            )
+            task.wait(1)
+        end
+    end)
+
+    -- ── Script list scroll frame ───────────────────────────────────────────
+    local scriptScroll = make("ScrollingFrame", {
+        Name             = "ScriptScroll",
+        Size             = UDim2.new(1, 0, 1, -100),
+        Position         = UDim2.new(0, 0, 0, 96),
+        BackgroundTransparency = 1,
+        BorderSizePixel  = 0,
+        ScrollBarThickness = 2,
+        ScrollBarImageColor3 = ACCENT_COLOR,
+        CanvasSize       = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+    }, scriptPanel)
+
+    local scriptList = listLayout(Enum.FillDirection.Vertical, 6, Enum.HorizontalAlignment.Left, scriptScroll)
+    padding(4, 4, 4, 0, scriptScroll)
+
+    -- Populate scripts for the current place (fall back to all if not matched)
+    local currentData = nil
+    for _, entry in ipairs(SCRIPT_DATA) do
+        if entry.placeId == game.PlaceId then
+            currentData = entry
+            break
+        end
+    end
+    if not currentData then currentData = SCRIPT_DATA[1] end -- default demo
+
+    for _, scriptEntry in ipairs(currentData.scripts) do
+        -- Card
+        local card = make("Frame", {
+            Name             = scriptEntry.name,
+            Size             = UDim2.new(1, 0, 0, 72),
+            BackgroundColor3 = BG_ELEM,
+            BorderSizePixel  = 0,
+        }, scriptScroll)
+        corner(8, card)
+
+        -- Script name
+        make("TextLabel", {
+            Size             = UDim2.new(1, -90, 0, 18),
+            Position         = UDim2.new(0, 10, 0, 8),
+            BackgroundTransparency = 1,
+            Text             = scriptEntry.name,
+            TextColor3       = TEXT_WHITE,
+            Font             = Enum.Font.GothamBold,
+            TextSize         = 12,
+            TextXAlignment   = Enum.TextXAlignment.Left,
+        }, card)
+
+        -- Changelog text
+        local logLabel = make("TextLabel", {
+            Size             = UDim2.new(1, -14, 0, 30),
+            Position         = UDim2.new(0, 10, 0, 28),
+            BackgroundTransparency = 1,
+            Text             = scriptEntry.changelog,
+            TextColor3       = TEXT_DIM,
+            Font             = Enum.Font.Gotham,
+            TextSize         = 10,
+            TextXAlignment   = Enum.TextXAlignment.Left,
+            TextYAlignment   = Enum.TextYAlignment.Top,
+            TextWrapped      = true,
+        }, card)
+
+        -- Load button
+        local loadBtn = make("TextButton", {
+            Size             = UDim2.new(0, 70, 0, 24),
+            Position         = UDim2.new(1, -80, 0, 8),
+            BackgroundColor3 = ACCENT_COLOR,
+            BorderSizePixel  = 0,
+            Text             = "Load",
+            TextColor3       = TEXT_WHITE,
+            Font             = Enum.Font.GothamBold,
+            TextSize         = 11,
+            AutoButtonColor  = false,
+        }, card)
+        corner(6, loadBtn)
+        wireButton(loadBtn, ACCENT_COLOR, Color3.fromRGB(129, 140, 248), function()
+            scriptEntry.execute()
+            -- Brief flash feedback
+            tween(loadBtn, { BackgroundColor3 = GREEN_COLOR }, 0.1)
+            task.delay(0.6, function()
+                tween(loadBtn, { BackgroundColor3 = ACCENT_COLOR }, 0.25)
+            end)
+        end)
+    end
+
+    -- ─────────────────────────────────────────────────────────────────────
+    -- GAME PANEL
+    -- ─────────────────────────────────────────────────────────────────────
+    local gamePanel = makePanel("GamePanel")
+    local gameFade  = makeFadeCover(gamePanel)
+
+    -- Search bar
+    local searchBox = make("TextBox", {
+        Name             = "SearchBox",
+        Size             = UDim2.new(1, 0, 0, 30),
+        Position         = UDim2.new(0, 0, 0, 0),
+        BackgroundColor3 = BG_ELEM,
+        BorderSizePixel  = 0,
+        PlaceholderText  = "Search games…",
+        PlaceholderColor3 = TEXT_DIM,
+        Text             = "",
+        TextColor3       = TEXT_WHITE,
+        Font             = Enum.Font.Gotham,
+        TextSize         = 12,
+        ClearTextOnFocus = false,
+    }, gamePanel)
+    corner(8, searchBox)
+    padding(0, 10, 0, 10, searchBox)
+    make("UIStroke", { Color = Color3.fromRGB(60, 60, 68), Thickness = 1 }, searchBox)
+
+    -- Game list scroll frame
+    local gameScroll = make("ScrollingFrame", {
+        Name             = "GameScroll",
+        Size             = UDim2.new(1, 0, 1, -38),
+        Position         = UDim2.new(0, 0, 0, 36),
+        BackgroundTransparency = 1,
+        BorderSizePixel  = 0,
+        ScrollBarThickness = 2,
+        ScrollBarImageColor3 = ACCENT_COLOR,
+        CanvasSize       = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+    }, gamePanel)
+    listLayout(Enum.FillDirection.Vertical, 5, Enum.HorizontalAlignment.Left, gameScroll)
+
+    -- Build game cards
+    local gameCards = {}
+    for _, gameEntry in ipairs(GAME_LIST) do
+        local row = make("Frame", {
+            Name             = gameEntry.name,
+            Size             = UDim2.new(1, -4, 0, 40),
+            BackgroundColor3 = BG_ELEM,
+            BorderSizePixel  = 0,
+        }, gameScroll)
+        corner(8, row)
+
+        make("TextLabel", {
+            Size             = UDim2.new(1, -80, 1, 0),
+            Position         = UDim2.new(0, 10, 0, 0),
+            BackgroundTransparency = 1,
+            Text             = gameEntry.name,
+            TextColor3       = TEXT_WHITE,
+            Font             = Enum.Font.GothamSemibold,
+            TextSize         = 12,
+            TextXAlignment   = Enum.TextXAlignment.Left,
+        }, row)
+
+        local joinBtn = make("TextButton", {
+            Size             = UDim2.new(0, 56, 0, 24),
+            Position         = UDim2.new(1, -64, 0.5, -12),
+            BackgroundColor3 = ACCENT_COLOR,
+            BorderSizePixel  = 0,
+            Text             = "Join",
+            TextColor3       = TEXT_WHITE,
+            Font             = Enum.Font.GothamBold,
+            TextSize         = 11,
+            AutoButtonColor  = false,
+        }, row)
+        corner(6, joinBtn)
+        wireButton(joinBtn, ACCENT_COLOR, Color3.fromRGB(129, 140, 248), function()
+            pcall(function()
+                TeleportService:Teleport(gameEntry.placeId, localPlayer)
+            end)
+        end)
+
+        table.insert(gameCards, { frame = row, name = gameEntry.name:lower() })
+    end
+
+    -- Search filtering
+    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+        local query = searchBox.Text:lower()
+        for _, card in ipairs(gameCards) do
+            card.frame.Visible = (query == "" or card.name:find(query, 1, true) ~= nil)
+        end
+    end)
+
+    -- ─────────────────────────────────────────────────────────────────────
+    -- TAB SWITCHING LOGIC
+    -- ─────────────────────────────────────────────────────────────────────
+    local activeTab = "Script"
+
+    local function activateTab(name)
+        if activeTab == name then return end
+        activeTab = name
+
+        local fromPanel = (name == "Script") and gamePanel   or scriptPanel
+        local toPanel   = (name == "Script") and scriptPanel or gamePanel
+        local fromFade  = (name == "Script") and gameFade    or scriptFade
+        local toFade    = (name == "Script") and scriptFade  or gameFade
+
+        -- Dim old tab button
+        local btnFrom = (name == "Script") and tabGame   or tabScript
+        local btnTo   = (name == "Script") and tabScript or tabGame
+
+        tween(btnFrom, { TextColor3 = TEXT_MUTED, BackgroundColor3 = BG_ELEM }, 0.2)
+        tween(btnTo,   { TextColor3 = TEXT_WHITE, BackgroundColor3 = ACCENT_COLOR }, 0.2)
+
+        -- Fade current panel out then show next
+        toFade.BackgroundTransparency = 0
+        toPanel.Visible = true
+
+        tweenCubic(fromFade, { BackgroundTransparency = 0 }, 0.2):Completed:Connect(function()
+            fromPanel.Visible = false
+            tweenCubic(toFade, { BackgroundTransparency = 1 }, 0.25)
+        end)
+    end
+
+    -- Highlight Script tab on start
+    tween(tabScript, { TextColor3 = TEXT_WHITE, BackgroundColor3 = ACCENT_COLOR }, 0)
+
+    tabScript.MouseButton1Click:Connect(function() activateTab("Script") end)
+    tabGame.MouseButton1Click:Connect(function()   activateTab("Game")   end)
+    wireButton(tabScript, BG_ELEM, BG_HOVER)
+    wireButton(tabGame,   BG_ELEM, BG_HOVER)
+
+    -- ─────────────────────────────────────────────────────────────────────
+    -- DRAGGING
+    -- ─────────────────────────────────────────────────────────────────────
+    local dragging      = false
+    local dragStart     = nil
+    local startPos      = nil
+
+    header.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging  = true
+            dragStart = input.Position
+            startPos  = mainFrame.Position
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (
+            input.UserInputType == Enum.UserInputType.MouseMovement or
+            input.UserInputType == Enum.UserInputType.Touch
+        ) then
+            local delta = input.Position - dragStart
+            local target = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+            -- Smooth follow
+            tween(mainFrame, { Position = target }, 0.05,
+                Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+
+    print("[Protection] GUI initialized for " .. localPlayer.Name)
+    return screenGui
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Auto-run if placed directly in a LocalScript
+-- ─────────────────────────────────────────────────────────────────────────────
+if script.ClassName == "LocalScript" then
+    Protection:Initialize()
+end
+
+return Protection
