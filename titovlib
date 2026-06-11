@@ -1,0 +1,572 @@
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local HttpService = game:GetService("HttpService")
+
+local Protection = {}
+Protection.__index = Protection
+
+local Games = {}
+local Version = "1.0.0"
+
+local function Tween(obj, props, time, style, dir)
+    return TweenService:Create(obj, TweenInfo.new(time or 0.25, style or Enum.EasingStyle.Quad, dir or Enum.EasingDirection.Out), props)
+end
+
+local function Create(class, props, parent)
+    local inst = Instance.new(class)
+    for k, v in pairs(props) do
+        inst[k] = v
+    end
+    if parent then
+        inst.Parent = parent
+    end
+    return inst
+end
+
+function Protection.new(title)
+    local self = setmetatable({}, Protection)
+
+    local ScreenGui = Create("ScreenGui", {
+        Name = "ProtectionUI",
+        ResetOnSpawn = false,
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    }, CoreGui)
+
+    local MainFrame = Create("Frame", {
+        Name = "MainFrame",
+        Size = UDim2.new(0, 420, 0, 280),
+        Position = UDim2.new(0.5, -210, 0.5, -140),
+        BackgroundColor3 = Color3.fromRGB(28, 28, 32),
+        BorderSizePixel = 0
+    }, ScreenGui)
+    Create("UICorner", {CornerRadius = UDim.new(0, 8)}, MainFrame)
+    Create("UIStroke", {Color = Color3.fromRGB(60, 60, 65), Thickness = 1}, MainFrame)
+
+    local TabContainer = Create("Frame", {
+        Name = "TabContainer",
+        Size = UDim2.new(0, 100, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(22, 22, 26),
+        BorderSizePixel = 0
+    }, MainFrame)
+    Create("UICorner", {CornerRadius = UDim.new(0, 8)}, TabContainer)
+
+    local TitleLabel = Create("TextLabel", {
+        Name = "TitleLabel",
+        Size = UDim2.new(1, -10, 0, 30),
+        Position = UDim2.new(0, 10, 0, 8),
+        BackgroundTransparency = 1,
+        Font = Enum.Font.GothamBold,
+        Text = title or "Protection",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = 18,
+        TextXAlignment = Enum.TextXAlignment.Left
+    }, TabContainer)
+
+    local TabHolder = Create("Frame", {
+        Name = "TabHolder",
+        Size = UDim2.new(1, -20, 0, 80),
+        Position = UDim2.new(0, 10, 0.5, -40),
+        BackgroundTransparency = 1
+    }, TabContainer)
+    Create("UIListLayout", {
+        FillDirection = Enum.FillDirection.Vertical,
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        VerticalAlignment = Enum.VerticalAlignment.Center,
+        Padding = UDim.new(0, 10)
+    }, TabHolder)
+
+    local InfoHolder = Create("Frame", {
+        Name = "InfoHolder",
+        Size = UDim2.new(1, -20, 0, 90),
+        Position = UDim2.new(0, 10, 1, -98),
+        BackgroundTransparency = 1
+    }, TabContainer)
+    Create("UIListLayout", {
+        FillDirection = Enum.FillDirection.Vertical,
+        Padding = UDim.new(0, 2)
+    }, InfoHolder)
+
+    local UsernameLabel = Create("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 16),
+        BackgroundTransparency = 1,
+        Font = Enum.Font.GothamBold,
+        Text = Players.LocalPlayer.Name,
+        TextColor3 = Color3.fromRGB(180, 180, 185),
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left
+    }, InfoHolder)
+
+    local GameLabel = Create("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 16),
+        BackgroundTransparency = 1,
+        Font = Enum.Font.GothamBold,
+        Text = "Game: ...",
+        TextColor3 = Color3.fromRGB(180, 180, 185),
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left
+    }, InfoHolder)
+
+    local TimeLabel = Create("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 16),
+        BackgroundTransparency = 1,
+        Font = Enum.Font.GothamBold,
+        Text = "Time: --:--:--",
+        TextColor3 = Color3.fromRGB(180, 180, 185),
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left
+    }, InfoHolder)
+
+    local VersionLabel = Create("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 16),
+        BackgroundTransparency = 1,
+        Font = Enum.Font.GothamBold,
+        Text = "Version: " .. Version,
+        TextColor3 = Color3.fromRGB(180, 180, 185),
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left
+    }, InfoHolder)
+
+    local ContentContainer = Create("Frame", {
+        Name = "ContentContainer",
+        Size = UDim2.new(1, -100, 1, 0),
+        Position = UDim2.new(0, 100, 0, 0),
+        BackgroundTransparency = 1,
+        ClipsDescendants = true
+    }, MainFrame)
+
+    local LoaderTab = Create("Frame", {
+        Name = "LoaderTab",
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1
+    }, ContentContainer)
+
+    local LoaderScroll = Create("ScrollingFrame", {
+        Name = "ScriptList",
+        Size = UDim2.new(1, -20, 1, -20),
+        Position = UDim2.new(0, 10, 0, 10),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 4,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y
+    }, LoaderTab)
+    Create("UIListLayout", {
+        FillDirection = Enum.FillDirection.Vertical,
+        Padding = UDim.new(0, 8),
+        SortOrder = Enum.SortOrder.LayoutOrder
+    }, LoaderScroll)
+
+    local GameTab = Create("Frame", {
+        Name = "GameTab",
+        Size = UDim2.new(1, 0, 1, 0),
+        Position = UDim2.new(1, 0, 0, 0),
+        BackgroundTransparency = 1
+    }, ContentContainer)
+
+    local SearchBar = Create("TextBox", {
+        Name = "SearchBar",
+        Size = UDim2.new(1, -20, 0, 32),
+        Position = UDim2.new(0, 10, 0, 10),
+        BackgroundColor3 = Color3.fromRGB(22, 22, 26),
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        PlaceholderText = "Search games...",
+        PlaceholderColor3 = Color3.fromRGB(120, 120, 125),
+        Font = Enum.Font.GothamBold,
+        TextSize = 14,
+        ClearTextOnFocus = false,
+        Text = ""
+    }, GameTab)
+    Create("UICorner", {CornerRadius = UDim.new(0, 6)}, SearchBar)
+    Create("UIStroke", {Color = Color3.fromRGB(60, 60, 65), Thickness = 1}, SearchBar)
+    Create("UIPadding", {PaddingLeft = UDim.new(0, 10)}, SearchBar)
+
+    local GameScroll = Create("ScrollingFrame", {
+        Name = "GameList",
+        Size = UDim2.new(1, -20, 1, -52),
+        Position = UDim2.new(0, 10, 0, 50),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 4,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y
+    }, GameTab)
+    Create("UIListLayout", {
+        FillDirection = Enum.FillDirection.Vertical,
+        Padding = UDim.new(0, 8),
+        SortOrder = Enum.SortOrder.LayoutOrder
+    }, GameScroll)
+
+    self.ScreenGui = ScreenGui
+    self.MainFrame = MainFrame
+    self.ContentContainer = ContentContainer
+    self.LoaderTab = LoaderTab
+    self.GameTab = GameTab
+    self.LoaderScroll = LoaderScroll
+    self.GameScroll = GameScroll
+    self.SearchBar = SearchBar
+    self.GameLabel = GameLabel
+    self.TimeLabel = TimeLabel
+    self.VersionLabel = VersionLabel
+    self.CurrentTab = "Loader"
+
+    local function MakeTabButton(name, order)
+        local Button = Create("TextButton", {
+            Name = name,
+            Size = UDim2.new(1, 0, 0, 32),
+            BackgroundTransparency = 1,
+            Font = Enum.Font.GothamBold,
+            Text = name,
+            TextColor3 = Color3.fromRGB(150, 150, 155),
+            TextSize = 16,
+            AutoButtonColor = false,
+            LayoutOrder = order
+        }, TabHolder)
+        Create("UIStroke", {
+            Color = Color3.fromRGB(0, 0, 0),
+            Thickness = 0,
+            Transparency = 1
+        }, Button)
+
+        Button.MouseEnter:Connect(function()
+            Tween(Button, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.2):Play()
+            local stroke = Button:FindFirstChildOfClass("UIStroke")
+            Tween(stroke, {Transparency = 0, Color = Color3.fromRGB(255, 255, 255), Thickness = 1}, 0.2):Play()
+        end)
+
+        Button.MouseLeave:Connect(function()
+            if self.CurrentTab ~= name then
+                Tween(Button, {TextColor3 = Color3.fromRGB(150, 150, 155)}, 0.2):Play()
+                local stroke = Button:FindFirstChildOfClass("UIStroke")
+                Tween(stroke, {Transparency = 1, Thickness = 0}, 0.2):Play()
+            end
+        end)
+
+        Button.MouseButton1Click:Connect(function()
+            self:SwitchTab(name)
+        end)
+
+        return Button
+    end
+
+    self.LoaderButton = MakeTabButton("Loader", 1)
+    self.GameButton = MakeTabButton("Game", 2)
+
+    self:SwitchTab("Loader", true)
+
+    self.SearchBar:GetPropertyChangedSignal("Text"):Connect(function()
+        self:RefreshGameList()
+    end)
+
+    task.spawn(function()
+        while task.wait(1) do
+            self.TimeLabel.Text = "Time: " .. os.date("%H:%M:%S")
+        end
+    end)
+
+    return self
+end
+
+function Protection:SwitchTab(name, instant)
+    if self.CurrentTab == name and not instant then
+        return
+    end
+
+    local prevTab = self.CurrentTab == "Loader" and self.LoaderTab or self.GameTab
+    local newTab = name == "Loader" and self.LoaderTab or self.GameTab
+    local prevButton = self.CurrentTab == "Loader" and self.LoaderButton or self.GameButton
+    local newButton = name == "Loader" and self.LoaderButton or self.GameButton
+
+    Tween(prevButton, {TextColor3 = Color3.fromRGB(150, 150, 155)}, 0.2):Play()
+    local prevStroke = prevButton:FindFirstChildOfClass("UIStroke")
+    Tween(prevStroke, {Transparency = 1, Thickness = 0}, 0.2):Play()
+
+    Tween(newButton, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.2):Play()
+    local newStroke = newButton:FindFirstChildOfClass("UIStroke")
+    Tween(newStroke, {Transparency = 0, Color = Color3.fromRGB(255, 255, 255), Thickness = 1}, 0.2):Play()
+
+    self.CurrentTab = name
+
+    if instant then
+        prevTab.Position = UDim2.new(name == "Loader" and 1 or -1, 0, 0, 0)
+        newTab.Position = UDim2.new(0, 0, 0, 0)
+        return
+    end
+
+    local direction = name == "Game" and -1 or 1
+    newTab.Position = UDim2.new(-direction, 0, 0, 0)
+
+    Tween(prevTab, {Position = UDim2.new(direction, 0, 0, 0)}, 0.35, Enum.EasingStyle.Quint):Play()
+    Tween(newTab, {Position = UDim2.new(0, 0, 0, 0)}, 0.35, Enum.EasingStyle.Quint):Play()
+end
+
+function Protection:SetVersion(version)
+    Version = version
+    self.VersionLabel.Text = "Version: " .. version
+end
+
+function Protection:RegisterGame(data)
+    Games[#Games + 1] = data
+    self:RefreshGameList()
+end
+
+function Protection:RefreshGameList()
+    for _, child in pairs(self.GameScroll:GetChildren()) do
+        if child:IsA("Frame") then
+            child:Destroy()
+        end
+    end
+
+    local sorted = {}
+    for _, g in pairs(Games) do
+        table.insert(sorted, g)
+    end
+    table.sort(sorted, function(a, b)
+        return a.Name:lower() < b.Name:lower()
+    end)
+
+    local searchText = self.SearchBar.Text:lower()
+
+    local order = 0
+    for _, g in pairs(sorted) do
+        if searchText == "" or g.Name:lower():find(searchText, 1, true) then
+            order = order + 1
+            self:CreateGameEntry(g, order)
+        end
+    end
+end
+
+function Protection:CreateGameEntry(data, order)
+    local Entry = Create("Frame", {
+        Name = data.Name,
+        Size = UDim2.new(1, 0, 0, 36),
+        BackgroundColor3 = Color3.fromRGB(22, 22, 26),
+        BorderSizePixel = 0,
+        LayoutOrder = order
+    }, self.GameScroll)
+    Create("UICorner", {CornerRadius = UDim.new(0, 6)}, Entry)
+
+    Create("TextLabel", {
+        Size = UDim2.new(1, -90, 1, 0),
+        Position = UDim2.new(0, 10, 0, 0),
+        BackgroundTransparency = 1,
+        Font = Enum.Font.GothamBold,
+        Text = data.Name,
+        TextColor3 = Color3.fromRGB(220, 220, 225),
+        TextSize = 14,
+        TextXAlignment = Enum.TextXAlignment.Left
+    }, Entry)
+
+    local JoinButton = Create("TextButton", {
+        Size = UDim2.new(0, 70, 1, -8),
+        Position = UDim2.new(1, -78, 0, 4),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        Font = Enum.Font.GothamBold,
+        Text = "Join",
+        TextColor3 = Color3.fromRGB(20, 20, 24),
+        TextSize = 13,
+        AutoButtonColor = false
+    }, Entry)
+    Create("UICorner", {CornerRadius = UDim.new(0, 5)}, JoinButton)
+    Create("UIStroke", {Color = Color3.fromRGB(0, 0, 0), Thickness = 1.5}, JoinButton)
+
+    JoinButton.MouseEnter:Connect(function()
+        Tween(JoinButton, {BackgroundColor3 = Color3.fromRGB(220, 220, 225)}, 0.15):Play()
+    end)
+    JoinButton.MouseLeave:Connect(function()
+        Tween(JoinButton, {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}, 0.15):Play()
+    end)
+
+    JoinButton.MouseButton1Click:Connect(function()
+        Players:GetService("TeleportService"):Teleport(data.PlaceId, Players.LocalPlayer)
+    end)
+end
+
+function Protection:LoadGame(gameId)
+    local found
+    for _, g in pairs(Games) do
+        if tostring(g.GameId) == tostring(gameId) then
+            found = g
+            break
+        end
+    end
+
+    for _, child in pairs(self.LoaderScroll:GetChildren()) do
+        if child:IsA("Frame") then
+            child:Destroy()
+        end
+    end
+
+    if not found then
+        self.GameLabel.Text = "Game: Unsupported"
+        return
+    end
+
+    self.GameLabel.Text = "Game: " .. found.Name .. " (" .. tostring(found.GameId) .. ")"
+
+    for i, script in ipairs(found.Scripts) do
+        self:CreateScriptEntry(script, i)
+    end
+end
+
+function Protection:CreateScriptEntry(script, order)
+    local Entry = Create("Frame", {
+        Name = script.Name,
+        Size = UDim2.new(1, 0, 0, 36),
+        BackgroundColor3 = Color3.fromRGB(22, 22, 26),
+        BorderSizePixel = 0,
+        LayoutOrder = order
+    }, self.LoaderScroll)
+    Create("UICorner", {CornerRadius = UDim.new(0, 6)}, Entry)
+
+    Create("TextLabel", {
+        Size = UDim2.new(1, -130, 1, 0),
+        Position = UDim2.new(0, 10, 0, 0),
+        BackgroundTransparency = 1,
+        Font = Enum.Font.GothamBold,
+        Text = script.Name,
+        TextColor3 = Color3.fromRGB(220, 220, 225),
+        TextSize = 14,
+        TextXAlignment = Enum.TextXAlignment.Left
+    }, Entry)
+
+    local LogButton = Create("ImageButton", {
+        Size = UDim2.new(0, 28, 0, 24),
+        Position = UDim2.new(1, -118, 0, 6),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        Image = "rbxassetid://10747384394",
+        ScaleType = Enum.ScaleType.Fit,
+        AutoButtonColor = false
+    }, Entry)
+    Create("UICorner", {CornerRadius = UDim.new(0, 5)}, LogButton)
+    Create("UIStroke", {Color = Color3.fromRGB(0, 0, 0), Thickness = 1.5}, LogButton)
+    Create("UIPadding", {
+        PaddingTop = UDim.new(0, 4),
+        PaddingBottom = UDim.new(0, 4),
+        PaddingLeft = UDim.new(0, 4),
+        PaddingRight = UDim.new(0, 4)
+    }, LogButton)
+
+    LogButton.MouseEnter:Connect(function()
+        Tween(LogButton, {BackgroundColor3 = Color3.fromRGB(220, 220, 225)}, 0.15):Play()
+    end)
+    LogButton.MouseLeave:Connect(function()
+        Tween(LogButton, {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}, 0.15):Play()
+    end)
+
+    LogButton.MouseButton1Click:Connect(function()
+        self:ShowUpdateLog(script)
+    end)
+
+    local LoadButton = Create("TextButton", {
+        Size = UDim2.new(0, 80, 1, -8),
+        Position = UDim2.new(1, -86, 0, 4),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        Font = Enum.Font.GothamBold,
+        Text = "▶ Load",
+        TextColor3 = Color3.fromRGB(20, 20, 24),
+        TextSize = 13,
+        AutoButtonColor = false
+    }, Entry)
+    Create("UICorner", {CornerRadius = UDim.new(0, 5)}, LoadButton)
+    Create("UIStroke", {Color = Color3.fromRGB(0, 0, 0), Thickness = 1.5}, LoadButton)
+
+    LoadButton.MouseEnter:Connect(function()
+        Tween(LoadButton, {BackgroundColor3 = Color3.fromRGB(220, 220, 225)}, 0.15):Play()
+    end)
+    LoadButton.MouseLeave:Connect(function()
+        Tween(LoadButton, {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}, 0.15):Play()
+    end)
+
+    LoadButton.MouseButton1Click:Connect(function()
+        local success, err = pcall(function()
+            loadstring(game:HttpGet(script.Url))()
+        end)
+        if not success then
+            warn("Failed to load script: " .. tostring(err))
+        end
+    end)
+end
+
+function Protection:ShowUpdateLog(script)
+    if self.LogFrame then
+        self.LogFrame:Destroy()
+    end
+
+    local LogFrame = Create("Frame", {
+        Name = "LogFrame",
+        Size = UDim2.new(0, 260, 0, 180),
+        Position = UDim2.new(0.5, -130, 0.5, -90),
+        BackgroundColor3 = Color3.fromRGB(28, 28, 32),
+        BorderSizePixel = 0,
+        ZIndex = 10
+    }, self.MainFrame)
+    Create("UICorner", {CornerRadius = UDim.new(0, 8)}, LogFrame)
+    Create("UIStroke", {Color = Color3.fromRGB(60, 60, 65), Thickness = 1}, LogFrame)
+
+    Create("TextLabel", {
+        Size = UDim2.new(1, -20, 0, 26),
+        Position = UDim2.new(0, 10, 0, 8),
+        BackgroundTransparency = 1,
+        Font = Enum.Font.GothamBold,
+        Text = script.Name .. " - Update Log",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = 14,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 10
+    }, LogFrame)
+
+    local CloseButton = Create("TextButton", {
+        Size = UDim2.new(0, 24, 0, 24),
+        Position = UDim2.new(1, -32, 0, 8),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        Font = Enum.Font.GothamBold,
+        Text = "X",
+        TextColor3 = Color3.fromRGB(20, 20, 24),
+        TextSize = 12,
+        AutoButtonColor = false,
+        ZIndex = 10
+    }, LogFrame)
+    Create("UICorner", {CornerRadius = UDim.new(0, 5)}, CloseButton)
+
+    CloseButton.MouseButton1Click:Connect(function()
+        LogFrame:Destroy()
+        self.LogFrame = nil
+    end)
+
+    local LogScroll = Create("ScrollingFrame", {
+        Size = UDim2.new(1, -20, 1, -46),
+        Position = UDim2.new(0, 10, 0, 38),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 4,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        ZIndex = 10
+    }, LogFrame)
+    Create("UIListLayout", {
+        FillDirection = Enum.FillDirection.Vertical,
+        Padding = UDim.new(0, 4)
+    }, LogScroll)
+
+    if script.UpdateLog then
+        for _, entry in ipairs(script.UpdateLog) do
+            Create("TextLabel", {
+                Size = UDim2.new(1, 0, 0, 0),
+                AutomaticSize = Enum.AutomaticSize.Y,
+                BackgroundTransparency = 1,
+                Font = Enum.Font.GothamBold,
+                Text = entry.Version .. " - " .. entry.Notes,
+                TextColor3 = Color3.fromRGB(200, 200, 205),
+                TextSize = 12,
+                TextWrapped = true,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex = 10
+            }, LogScroll)
+        end
+    end
+
+    self.LogFrame = LogFrame
+end
+
+return Protection
