@@ -1,7 +1,7 @@
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
-local HttpService = game:GetService("HttpService")
+local UserInputService = game:GetService("UserInputService")
 
 local Protection = {}
 Protection.__index = Protection
@@ -24,6 +24,35 @@ local function Create(class, props, parent)
     return inst
 end
 
+local function MakeDraggable(frame, dragHandle)
+    local dragging = false
+    local dragStart, startPos
+
+    dragHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+end
+
 function Protection.new(title)
     local self = setmetatable({}, Protection)
 
@@ -33,104 +62,202 @@ function Protection.new(title)
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     }, CoreGui)
 
-    local MainFrame = Create("Frame", {
-        Name = "MainFrame",
-        Size = UDim2.new(0, 420, 0, 280),
-        Position = UDim2.new(0.5, -210, 0.5, -140),
-        BackgroundColor3 = Color3.fromRGB(28, 28, 32),
+    local LoadingFrame = Create("Frame", {
+        Name = "LoadingFrame",
+        Size = UDim2.new(0, 300, 0, 170),
+        Position = UDim2.new(0.5, -150, 0.5, -85),
+        BackgroundColor3 = Color3.fromRGB(18, 18, 21),
         BorderSizePixel = 0
     }, ScreenGui)
-    Create("UICorner", {CornerRadius = UDim.new(0, 8)}, MainFrame)
-    Create("UIStroke", {Color = Color3.fromRGB(60, 60, 65), Thickness = 1}, MainFrame)
+    Create("UICorner", {CornerRadius = UDim.new(0, 10)}, LoadingFrame)
+    local LoadStroke = Create("UIStroke", {Color = Color3.fromRGB(255, 255, 255), Thickness = 1, Transparency = 0.85}, LoadingFrame)
 
-    local TabContainer = Create("Frame", {
-        Name = "TabContainer",
-        Size = UDim2.new(0, 100, 1, 0),
-        BackgroundColor3 = Color3.fromRGB(22, 22, 26),
-        BorderSizePixel = 0
-    }, MainFrame)
-    Create("UICorner", {CornerRadius = UDim.new(0, 8)}, TabContainer)
+    local Glow = Create("ImageLabel", {
+        Name = "Glow",
+        Size = UDim2.new(1, 100, 1, 100),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://5028857084",
+        ImageColor3 = Color3.fromRGB(255, 255, 255),
+        ImageTransparency = 0.93,
+        ZIndex = 0
+    }, LoadingFrame)
 
-    local TitleLabel = Create("TextLabel", {
-        Name = "TitleLabel",
-        Size = UDim2.new(1, -10, 0, 30),
-        Position = UDim2.new(0, 10, 0, 8),
+    local LoadingTitle = Create("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 30),
+        Position = UDim2.new(0, 0, 0, 46),
         BackgroundTransparency = 1,
         Font = Enum.Font.GothamBold,
         Text = title or "Protection",
         TextColor3 = Color3.fromRGB(255, 255, 255),
-        TextSize = 18,
+        TextSize = 22,
+        TextTransparency = 1
+    }, LoadingFrame)
+    Create("UIStroke", {Color = Color3.fromRGB(0, 0, 0), Thickness = 1, Transparency = 1}, LoadingTitle)
+
+    local LoadingSub = Create("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 18),
+        Position = UDim2.new(0, 0, 0, 80),
+        BackgroundTransparency = 1,
+        Font = Enum.Font.GothamBold,
+        Text = "Initializing...",
+        TextColor3 = Color3.fromRGB(140, 140, 145),
+        TextSize = 13,
+        TextTransparency = 1
+    }, LoadingFrame)
+
+    local BarBack = Create("Frame", {
+        Size = UDim2.new(0, 220, 0, 4),
+        Position = UDim2.new(0.5, -110, 0, 116),
+        BackgroundColor3 = Color3.fromRGB(40, 40, 45),
+        BorderSizePixel = 0,
+        BackgroundTransparency = 1
+    }, LoadingFrame)
+    Create("UICorner", {CornerRadius = UDim.new(1, 0)}, BarBack)
+
+    local BarFill = Create("Frame", {
+        Size = UDim2.new(0, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0,
+        BackgroundTransparency = 1
+    }, BarBack)
+    Create("UICorner", {CornerRadius = UDim.new(1, 0)}, BarFill)
+
+    Tween(LoadingTitle, {TextTransparency = 0}, 0.5):Play()
+    task.wait(0.1)
+    Tween(LoadingSub, {TextTransparency = 0}, 0.5):Play()
+    task.wait(0.1)
+    Tween(BarBack, {BackgroundTransparency = 0}, 0.3):Play()
+    Tween(BarFill, {BackgroundTransparency = 0}, 0.3):Play()
+    Tween(BarFill, {Size = UDim2.new(1, 0, 1, 0)}, 1, Enum.EasingStyle.Quint):Play()
+
+    task.spawn(function()
+        local rotations = {"Initializing...", "Loading assets...", "Connecting...", "Almost ready..."}
+        for i = 2, 4 do
+            task.wait(0.35)
+            LoadingSub.Text = rotations[i]
+        end
+    end)
+
+    task.wait(1.4)
+
+    local MainFrame = Create("Frame", {
+        Name = "MainFrame",
+        Size = UDim2.new(0, 360, 0, 235),
+        Position = UDim2.new(0.5, -180, 0.5, -118),
+        BackgroundColor3 = Color3.fromRGB(24, 24, 27),
+        BorderSizePixel = 0,
+        BackgroundTransparency = 1,
+        ClipsDescendants = false
+    }, ScreenGui)
+    Create("UICorner", {CornerRadius = UDim.new(0, 10)}, MainFrame)
+    local MainStroke = Create("UIStroke", {Color = Color3.fromRGB(70, 70, 75), Thickness = 1, Transparency = 1}, MainFrame)
+
+    local InnerGlow = Create("ImageLabel", {
+        Name = "InnerGlow",
+        Size = UDim2.new(1, 60, 0, 110),
+        Position = UDim2.new(0.5, 0, 0, -10),
+        AnchorPoint = Vector2.new(0.5, 0),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://5028857084",
+        ImageColor3 = Color3.fromRGB(255, 255, 255),
+        ImageTransparency = 1,
+        ZIndex = 0
+    }, MainFrame)
+
+    Tween(LoadingFrame, {BackgroundTransparency = 1}, 0.35):Play()
+    Tween(LoadStroke, {Transparency = 1}, 0.35):Play()
+    Tween(LoadingTitle, {TextTransparency = 1}, 0.3):Play()
+    Tween(LoadingSub, {TextTransparency = 1}, 0.3):Play()
+    Tween(BarBack, {BackgroundTransparency = 1}, 0.3):Play()
+    Tween(BarFill, {BackgroundTransparency = 1}, 0.3):Play()
+    Tween(Glow, {ImageTransparency = 1}, 0.35):Play()
+
+    Tween(MainFrame, {BackgroundTransparency = 0}, 0.4):Play()
+    Tween(MainStroke, {Transparency = 0.4}, 0.4):Play()
+    Tween(InnerGlow, {ImageTransparency = 0.92}, 0.5):Play()
+
+    task.delay(0.4, function()
+        LoadingFrame:Destroy()
+    end)
+
+    local TopBar = Create("Frame", {
+        Name = "TopBar",
+        Size = UDim2.new(1, 0, 0, 34),
+        BackgroundTransparency = 1
+    }, MainFrame)
+
+    local TitleLabel = Create("TextLabel", {
+        Name = "TitleLabel",
+        Size = UDim2.new(1, -24, 1, 0),
+        Position = UDim2.new(0, 14, 0, 0),
+        BackgroundTransparency = 1,
+        Font = Enum.Font.GothamBold,
+        Text = title or "Protection",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = 16,
         TextXAlignment = Enum.TextXAlignment.Left
-    }, TabContainer)
+    }, TopBar)
+    Create("UIStroke", {Color = Color3.fromRGB(0, 0, 0), Thickness = 1, Transparency = 0.6}, TitleLabel)
+
+    local TabContainer = Create("Frame", {
+        Name = "TabContainer",
+        Size = UDim2.new(0, 104, 1, -44),
+        Position = UDim2.new(0, 6, 0, 38),
+        BackgroundColor3 = Color3.fromRGB(20, 20, 23),
+        BorderSizePixel = 0,
+        ClipsDescendants = true
+    }, MainFrame)
+    Create("UICorner", {CornerRadius = UDim.new(0, 8)}, TabContainer)
 
     local TabHolder = Create("Frame", {
         Name = "TabHolder",
-        Size = UDim2.new(1, -20, 0, 80),
-        Position = UDim2.new(0, 10, 0.5, -40),
+        Size = UDim2.new(1, -16, 0, 76),
+        Position = UDim2.new(0, 8, 0, 12),
         BackgroundTransparency = 1
     }, TabContainer)
     Create("UIListLayout", {
         FillDirection = Enum.FillDirection.Vertical,
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
-        VerticalAlignment = Enum.VerticalAlignment.Center,
-        Padding = UDim.new(0, 10)
+        VerticalAlignment = Enum.VerticalAlignment.Top,
+        Padding = UDim.new(0, 8)
     }, TabHolder)
 
     local InfoHolder = Create("Frame", {
         Name = "InfoHolder",
-        Size = UDim2.new(1, -20, 0, 90),
-        Position = UDim2.new(0, 10, 1, -98),
+        Size = UDim2.new(1, -16, 0, 86),
+        Position = UDim2.new(0, 8, 1, -94),
         BackgroundTransparency = 1
     }, TabContainer)
     Create("UIListLayout", {
         FillDirection = Enum.FillDirection.Vertical,
-        Padding = UDim.new(0, 2)
+        Padding = UDim.new(0, 4)
     }, InfoHolder)
 
-    local UsernameLabel = Create("TextLabel", {
-        Size = UDim2.new(1, 0, 0, 16),
-        BackgroundTransparency = 1,
-        Font = Enum.Font.GothamBold,
-        Text = Players.LocalPlayer.Name,
-        TextColor3 = Color3.fromRGB(180, 180, 185),
-        TextSize = 12,
-        TextXAlignment = Enum.TextXAlignment.Left
-    }, InfoHolder)
+    local function MakeInfoLabel(text, layoutOrder)
+        return Create("TextLabel", {
+            Size = UDim2.new(1, 0, 0, 14),
+            BackgroundTransparency = 1,
+            Font = Enum.Font.GothamBold,
+            Text = text,
+            TextColor3 = Color3.fromRGB(150, 150, 156),
+            TextSize = 11,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            LayoutOrder = layoutOrder
+        }, InfoHolder)
+    end
 
-    local GameLabel = Create("TextLabel", {
-        Size = UDim2.new(1, 0, 0, 16),
-        BackgroundTransparency = 1,
-        Font = Enum.Font.GothamBold,
-        Text = "Game: ...",
-        TextColor3 = Color3.fromRGB(180, 180, 185),
-        TextSize = 12,
-        TextXAlignment = Enum.TextXAlignment.Left
-    }, InfoHolder)
-
-    local TimeLabel = Create("TextLabel", {
-        Size = UDim2.new(1, 0, 0, 16),
-        BackgroundTransparency = 1,
-        Font = Enum.Font.GothamBold,
-        Text = "Time: --:--:--",
-        TextColor3 = Color3.fromRGB(180, 180, 185),
-        TextSize = 12,
-        TextXAlignment = Enum.TextXAlignment.Left
-    }, InfoHolder)
-
-    local VersionLabel = Create("TextLabel", {
-        Size = UDim2.new(1, 0, 0, 16),
-        BackgroundTransparency = 1,
-        Font = Enum.Font.GothamBold,
-        Text = "Version: " .. Version,
-        TextColor3 = Color3.fromRGB(180, 180, 185),
-        TextSize = 12,
-        TextXAlignment = Enum.TextXAlignment.Left
-    }, InfoHolder)
+    local UsernameLabel = MakeInfoLabel(Players.LocalPlayer.Name, 1)
+    local GameLabel = MakeInfoLabel("Game: Unknown", 2)
+    local TimeLabel = MakeInfoLabel("Time: --:--:--", 3)
+    local VersionLabel = MakeInfoLabel("Version: " .. Version, 4)
 
     local ContentContainer = Create("Frame", {
         Name = "ContentContainer",
-        Size = UDim2.new(1, -100, 1, 0),
-        Position = UDim2.new(0, 100, 0, 0),
+        Size = UDim2.new(1, -122, 1, -52),
+        Position = UDim2.new(0, 116, 0, 38),
         BackgroundTransparency = 1,
         ClipsDescendants = true
     }, MainFrame)
@@ -143,18 +270,24 @@ function Protection.new(title)
 
     local LoaderScroll = Create("ScrollingFrame", {
         Name = "ScriptList",
-        Size = UDim2.new(1, -20, 1, -20),
-        Position = UDim2.new(0, 10, 0, 10),
+        Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
-        ScrollBarThickness = 4,
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255),
+        ScrollBarImageTransparency = 0.7,
         CanvasSize = UDim2.new(0, 0, 0, 0),
-        AutomaticCanvasSize = Enum.AutomaticSize.Y
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        TopImage = "rbxassetid://0",
+        BottomImage = "rbxassetid://0"
     }, LoaderTab)
     Create("UIListLayout", {
         FillDirection = Enum.FillDirection.Vertical,
-        Padding = UDim.new(0, 8),
+        Padding = UDim.new(0, 6),
         SortOrder = Enum.SortOrder.LayoutOrder
+    }, LoaderScroll)
+    Create("UIPadding", {
+        PaddingRight = UDim.new(0, 6)
     }, LoaderScroll)
 
     local GameTab = Create("Frame", {
@@ -166,36 +299,45 @@ function Protection.new(title)
 
     local SearchBar = Create("TextBox", {
         Name = "SearchBar",
-        Size = UDim2.new(1, -20, 0, 32),
-        Position = UDim2.new(0, 10, 0, 10),
-        BackgroundColor3 = Color3.fromRGB(22, 22, 26),
+        Size = UDim2.new(1, -6, 0, 30),
+        BackgroundColor3 = Color3.fromRGB(20, 20, 23),
         TextColor3 = Color3.fromRGB(255, 255, 255),
         PlaceholderText = "Search games...",
-        PlaceholderColor3 = Color3.fromRGB(120, 120, 125),
+        PlaceholderColor3 = Color3.fromRGB(110, 110, 115),
         Font = Enum.Font.GothamBold,
-        TextSize = 14,
+        TextSize = 13,
         ClearTextOnFocus = false,
-        Text = ""
+        Text = "",
+        TextXAlignment = Enum.TextXAlignment.Left
     }, GameTab)
-    Create("UICorner", {CornerRadius = UDim.new(0, 6)}, SearchBar)
-    Create("UIStroke", {Color = Color3.fromRGB(60, 60, 65), Thickness = 1}, SearchBar)
-    Create("UIPadding", {PaddingLeft = UDim.new(0, 10)}, SearchBar)
+    Create("UICorner", {CornerRadius = UDim.new(0, 7)}, SearchBar)
+    Create("UIStroke", {Color = Color3.fromRGB(255, 255, 255), Thickness = 1, Transparency = 0.85}, SearchBar)
+    Create("UIPadding", {PaddingLeft = UDim.new(0, 12)}, SearchBar)
 
     local GameScroll = Create("ScrollingFrame", {
         Name = "GameList",
-        Size = UDim2.new(1, -20, 1, -52),
-        Position = UDim2.new(0, 10, 0, 50),
+        Size = UDim2.new(1, 0, 1, -38),
+        Position = UDim2.new(0, 0, 0, 38),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
-        ScrollBarThickness = 4,
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255),
+        ScrollBarImageTransparency = 0.7,
         CanvasSize = UDim2.new(0, 0, 0, 0),
-        AutomaticCanvasSize = Enum.AutomaticSize.Y
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        TopImage = "rbxassetid://0",
+        BottomImage = "rbxassetid://0"
     }, GameTab)
     Create("UIListLayout", {
         FillDirection = Enum.FillDirection.Vertical,
-        Padding = UDim.new(0, 8),
+        Padding = UDim.new(0, 6),
         SortOrder = Enum.SortOrder.LayoutOrder
     }, GameScroll)
+    Create("UIPadding", {
+        PaddingRight = UDim.new(0, 6)
+    }, GameScroll)
+
+    MakeDraggable(MainFrame, TopBar)
 
     self.ScreenGui = ScreenGui
     self.MainFrame = MainFrame
@@ -213,32 +355,40 @@ function Protection.new(title)
     local function MakeTabButton(name, order)
         local Button = Create("TextButton", {
             Name = name,
-            Size = UDim2.new(1, 0, 0, 32),
+            Size = UDim2.new(1, 0, 0, 30),
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
             BackgroundTransparency = 1,
             Font = Enum.Font.GothamBold,
             Text = name,
-            TextColor3 = Color3.fromRGB(150, 150, 155),
-            TextSize = 16,
+            TextColor3 = Color3.fromRGB(150, 150, 156),
+            TextSize = 14,
             AutoButtonColor = false,
             LayoutOrder = order
         }, TabHolder)
+        Create("UICorner", {CornerRadius = UDim.new(0, 6)}, Button)
+        local stroke = Create("UIStroke", {
+            Color = Color3.fromRGB(255, 255, 255),
+            Thickness = 1,
+            Transparency = 1
+        }, Button)
         Create("UIStroke", {
             Color = Color3.fromRGB(0, 0, 0),
-            Thickness = 0,
-            Transparency = 1
+            Thickness = 1,
+            Transparency = 0.6,
+            ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
         }, Button)
 
         Button.MouseEnter:Connect(function()
-            Tween(Button, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.2):Play()
-            local stroke = Button:FindFirstChildOfClass("UIStroke")
-            Tween(stroke, {Transparency = 0, Color = Color3.fromRGB(255, 255, 255), Thickness = 1}, 0.2):Play()
+            if self.CurrentTab ~= name then
+                Tween(Button, {TextColor3 = Color3.fromRGB(225, 225, 230), BackgroundTransparency = 0.93}, 0.18):Play()
+                Tween(stroke, {Transparency = 0.6}, 0.18):Play()
+            end
         end)
 
         Button.MouseLeave:Connect(function()
             if self.CurrentTab ~= name then
-                Tween(Button, {TextColor3 = Color3.fromRGB(150, 150, 155)}, 0.2):Play()
-                local stroke = Button:FindFirstChildOfClass("UIStroke")
-                Tween(stroke, {Transparency = 1, Thickness = 0}, 0.2):Play()
+                Tween(Button, {TextColor3 = Color3.fromRGB(150, 150, 156), BackgroundTransparency = 1}, 0.18):Play()
+                Tween(stroke, {Transparency = 1}, 0.18):Play()
             end
         end)
 
@@ -246,11 +396,11 @@ function Protection.new(title)
             self:SwitchTab(name)
         end)
 
-        return Button
+        return Button, stroke
     end
 
-    self.LoaderButton = MakeTabButton("Loader", 1)
-    self.GameButton = MakeTabButton("Game", 2)
+    self.LoaderButton, self.LoaderStroke = MakeTabButton("Loader", 1)
+    self.GameButton, self.GameStroke = MakeTabButton("Game", 2)
 
     self:SwitchTab("Loader", true)
 
@@ -267,6 +417,16 @@ function Protection.new(title)
     return self
 end
 
+function Protection:SetActiveTabStyle(button, stroke, active)
+    if active then
+        Tween(button, {TextColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 0.9}, 0.2):Play()
+        Tween(stroke, {Transparency = 0.5}, 0.2):Play()
+    else
+        Tween(button, {TextColor3 = Color3.fromRGB(150, 150, 156), BackgroundTransparency = 1}, 0.2):Play()
+        Tween(stroke, {Transparency = 1}, 0.2):Play()
+    end
+end
+
 function Protection:SwitchTab(name, instant)
     if self.CurrentTab == name and not instant then
         return
@@ -276,14 +436,11 @@ function Protection:SwitchTab(name, instant)
     local newTab = name == "Loader" and self.LoaderTab or self.GameTab
     local prevButton = self.CurrentTab == "Loader" and self.LoaderButton or self.GameButton
     local newButton = name == "Loader" and self.LoaderButton or self.GameButton
+    local prevStroke = self.CurrentTab == "Loader" and self.LoaderStroke or self.GameStroke
+    local newStroke = name == "Loader" and self.LoaderStroke or self.GameStroke
 
-    Tween(prevButton, {TextColor3 = Color3.fromRGB(150, 150, 155)}, 0.2):Play()
-    local prevStroke = prevButton:FindFirstChildOfClass("UIStroke")
-    Tween(prevStroke, {Transparency = 1, Thickness = 0}, 0.2):Play()
-
-    Tween(newButton, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.2):Play()
-    local newStroke = newButton:FindFirstChildOfClass("UIStroke")
-    Tween(newStroke, {Transparency = 0, Color = Color3.fromRGB(255, 255, 255), Thickness = 1}, 0.2):Play()
+    self:SetActiveTabStyle(prevButton, prevStroke, false)
+    self:SetActiveTabStyle(newButton, newStroke, true)
 
     self.CurrentTab = name
 
@@ -295,9 +452,10 @@ function Protection:SwitchTab(name, instant)
 
     local direction = name == "Game" and -1 or 1
     newTab.Position = UDim2.new(-direction, 0, 0, 0)
+    newTab.Visible = true
 
-    Tween(prevTab, {Position = UDim2.new(direction, 0, 0, 0)}, 0.35, Enum.EasingStyle.Quint):Play()
-    Tween(newTab, {Position = UDim2.new(0, 0, 0, 0)}, 0.35, Enum.EasingStyle.Quint):Play()
+    Tween(prevTab, {Position = UDim2.new(direction, 0, 0, 0)}, 0.4, Enum.EasingStyle.Quint):Play()
+    Tween(newTab, {Position = UDim2.new(0, 0, 0, 0)}, 0.4, Enum.EasingStyle.Quint):Play()
 end
 
 function Protection:SetVersion(version)
@@ -339,39 +497,44 @@ end
 function Protection:CreateGameEntry(data, order)
     local Entry = Create("Frame", {
         Name = data.Name,
-        Size = UDim2.new(1, 0, 0, 36),
-        BackgroundColor3 = Color3.fromRGB(22, 22, 26),
+        Size = UDim2.new(1, 0, 0, 32),
+        BackgroundColor3 = Color3.fromRGB(20, 20, 23),
         BorderSizePixel = 0,
         LayoutOrder = order
     }, self.GameScroll)
-    Create("UICorner", {CornerRadius = UDim.new(0, 6)}, Entry)
+    Create("UICorner", {CornerRadius = UDim.new(0, 7)}, Entry)
+    Create("UIStroke", {Color = Color3.fromRGB(255, 255, 255), Thickness = 1, Transparency = 0.92}, Entry)
+    Create("UIPadding", {
+        PaddingLeft = UDim.new(0, 10),
+        PaddingRight = UDim.new(0, 6)
+    }, Entry)
 
     Create("TextLabel", {
-        Size = UDim2.new(1, -90, 1, 0),
-        Position = UDim2.new(0, 10, 0, 0),
+        Size = UDim2.new(1, -76, 1, 0),
         BackgroundTransparency = 1,
         Font = Enum.Font.GothamBold,
         Text = data.Name,
         TextColor3 = Color3.fromRGB(220, 220, 225),
-        TextSize = 14,
-        TextXAlignment = Enum.TextXAlignment.Left
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd
     }, Entry)
 
     local JoinButton = Create("TextButton", {
-        Size = UDim2.new(0, 70, 1, -8),
-        Position = UDim2.new(1, -78, 0, 4),
+        Size = UDim2.new(0, 64, 0, 22),
+        Position = UDim2.new(1, -64, 0.5, -11),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         Font = Enum.Font.GothamBold,
         Text = "Join",
         TextColor3 = Color3.fromRGB(20, 20, 24),
-        TextSize = 13,
+        TextSize = 12,
         AutoButtonColor = false
     }, Entry)
     Create("UICorner", {CornerRadius = UDim.new(0, 5)}, JoinButton)
-    Create("UIStroke", {Color = Color3.fromRGB(0, 0, 0), Thickness = 1.5}, JoinButton)
+    Create("UIStroke", {Color = Color3.fromRGB(0, 0, 0), Thickness = 1.5, Transparency = 0.4}, JoinButton)
 
     JoinButton.MouseEnter:Connect(function()
-        Tween(JoinButton, {BackgroundColor3 = Color3.fromRGB(220, 220, 225)}, 0.15):Play()
+        Tween(JoinButton, {BackgroundColor3 = Color3.fromRGB(225, 225, 230)}, 0.15):Play()
     end)
     JoinButton.MouseLeave:Connect(function()
         Tween(JoinButton, {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}, 0.15):Play()
@@ -412,34 +575,39 @@ end
 function Protection:CreateScriptEntry(script, order)
     local Entry = Create("Frame", {
         Name = script.Name,
-        Size = UDim2.new(1, 0, 0, 36),
-        BackgroundColor3 = Color3.fromRGB(22, 22, 26),
+        Size = UDim2.new(1, 0, 0, 32),
+        BackgroundColor3 = Color3.fromRGB(20, 20, 23),
         BorderSizePixel = 0,
         LayoutOrder = order
     }, self.LoaderScroll)
-    Create("UICorner", {CornerRadius = UDim.new(0, 6)}, Entry)
+    Create("UICorner", {CornerRadius = UDim.new(0, 7)}, Entry)
+    Create("UIStroke", {Color = Color3.fromRGB(255, 255, 255), Thickness = 1, Transparency = 0.92}, Entry)
+    Create("UIPadding", {
+        PaddingLeft = UDim.new(0, 10),
+        PaddingRight = UDim.new(0, 6)
+    }, Entry)
 
     Create("TextLabel", {
-        Size = UDim2.new(1, -130, 1, 0),
-        Position = UDim2.new(0, 10, 0, 0),
+        Size = UDim2.new(1, -118, 1, 0),
         BackgroundTransparency = 1,
         Font = Enum.Font.GothamBold,
         Text = script.Name,
         TextColor3 = Color3.fromRGB(220, 220, 225),
-        TextSize = 14,
-        TextXAlignment = Enum.TextXAlignment.Left
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd
     }, Entry)
 
     local LogButton = Create("ImageButton", {
-        Size = UDim2.new(0, 28, 0, 24),
-        Position = UDim2.new(1, -118, 0, 6),
+        Size = UDim2.new(0, 24, 0, 20),
+        Position = UDim2.new(1, -116, 0.5, -10),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         Image = "rbxassetid://10747384394",
         ScaleType = Enum.ScaleType.Fit,
         AutoButtonColor = false
     }, Entry)
     Create("UICorner", {CornerRadius = UDim.new(0, 5)}, LogButton)
-    Create("UIStroke", {Color = Color3.fromRGB(0, 0, 0), Thickness = 1.5}, LogButton)
+    Create("UIStroke", {Color = Color3.fromRGB(0, 0, 0), Thickness = 1.5, Transparency = 0.4}, LogButton)
     Create("UIPadding", {
         PaddingTop = UDim.new(0, 4),
         PaddingBottom = UDim.new(0, 4),
@@ -448,7 +616,7 @@ function Protection:CreateScriptEntry(script, order)
     }, LogButton)
 
     LogButton.MouseEnter:Connect(function()
-        Tween(LogButton, {BackgroundColor3 = Color3.fromRGB(220, 220, 225)}, 0.15):Play()
+        Tween(LogButton, {BackgroundColor3 = Color3.fromRGB(225, 225, 230)}, 0.15):Play()
     end)
     LogButton.MouseLeave:Connect(function()
         Tween(LogButton, {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}, 0.15):Play()
@@ -459,32 +627,40 @@ function Protection:CreateScriptEntry(script, order)
     end)
 
     local LoadButton = Create("TextButton", {
-        Size = UDim2.new(0, 80, 1, -8),
-        Position = UDim2.new(1, -86, 0, 4),
+        Size = UDim2.new(0, 84, 0, 22),
+        Position = UDim2.new(1, -84, 0.5, -11),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         Font = Enum.Font.GothamBold,
-        Text = "▶ Load",
+        Text = "▶  Load",
         TextColor3 = Color3.fromRGB(20, 20, 24),
-        TextSize = 13,
+        TextSize = 12,
         AutoButtonColor = false
     }, Entry)
     Create("UICorner", {CornerRadius = UDim.new(0, 5)}, LoadButton)
-    Create("UIStroke", {Color = Color3.fromRGB(0, 0, 0), Thickness = 1.5}, LoadButton)
+    Create("UIStroke", {Color = Color3.fromRGB(0, 0, 0), Thickness = 1.5, Transparency = 0.4}, LoadButton)
 
     LoadButton.MouseEnter:Connect(function()
-        Tween(LoadButton, {BackgroundColor3 = Color3.fromRGB(220, 220, 225)}, 0.15):Play()
+        Tween(LoadButton, {BackgroundColor3 = Color3.fromRGB(225, 225, 230)}, 0.15):Play()
     end)
     LoadButton.MouseLeave:Connect(function()
         Tween(LoadButton, {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}, 0.15):Play()
     end)
 
     LoadButton.MouseButton1Click:Connect(function()
+        local original = LoadButton.Text
+        LoadButton.Text = "..."
         local success, err = pcall(function()
             loadstring(game:HttpGet(script.Url))()
         end)
         if not success then
             warn("Failed to load script: " .. tostring(err))
+            LoadButton.Text = "Error"
+            task.wait(1)
+        else
+            LoadButton.Text = "Loaded"
+            task.wait(1)
         end
+        LoadButton.Text = original
     end)
 end
 
@@ -492,54 +668,67 @@ function Protection:ShowUpdateLog(script)
     if self.LogFrame then
         self.LogFrame:Destroy()
     end
+    if self.LogOverlay then
+        self.LogOverlay:Destroy()
+    end
+
+    local Overlay = Create("Frame", {
+        Name = "LogOverlay",
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ZIndex = 9
+    }, self.MainFrame)
+    Create("UICorner", {CornerRadius = UDim.new(0, 10)}, Overlay)
 
     local LogFrame = Create("Frame", {
         Name = "LogFrame",
-        Size = UDim2.new(0, 260, 0, 180),
-        Position = UDim2.new(0.5, -130, 0.5, -90),
+        Size = UDim2.new(0, 230, 0, 0),
+        Position = UDim2.new(0.5, -115, 0.5, 0),
+        AnchorPoint = Vector2.new(0, 0.5),
         BackgroundColor3 = Color3.fromRGB(28, 28, 32),
         BorderSizePixel = 0,
-        ZIndex = 10
+        ZIndex = 10,
+        ClipsDescendants = true
     }, self.MainFrame)
     Create("UICorner", {CornerRadius = UDim.new(0, 8)}, LogFrame)
-    Create("UIStroke", {Color = Color3.fromRGB(60, 60, 65), Thickness = 1}, LogFrame)
+    Create("UIStroke", {Color = Color3.fromRGB(255, 255, 255), Thickness = 1, Transparency = 0.85}, LogFrame)
 
     Create("TextLabel", {
-        Size = UDim2.new(1, -20, 0, 26),
-        Position = UDim2.new(0, 10, 0, 8),
+        Size = UDim2.new(1, -40, 0, 24),
+        Position = UDim2.new(0, 12, 0, 8),
         BackgroundTransparency = 1,
         Font = Enum.Font.GothamBold,
-        Text = script.Name .. " - Update Log",
+        Text = script.Name,
         TextColor3 = Color3.fromRGB(255, 255, 255),
-        TextSize = 14,
+        TextSize = 13,
         TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
         ZIndex = 10
     }, LogFrame)
 
     local CloseButton = Create("TextButton", {
-        Size = UDim2.new(0, 24, 0, 24),
-        Position = UDim2.new(1, -32, 0, 8),
+        Size = UDim2.new(0, 22, 0, 22),
+        Position = UDim2.new(1, -30, 0, 8),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         Font = Enum.Font.GothamBold,
         Text = "X",
         TextColor3 = Color3.fromRGB(20, 20, 24),
-        TextSize = 12,
+        TextSize = 11,
         AutoButtonColor = false,
         ZIndex = 10
     }, LogFrame)
     Create("UICorner", {CornerRadius = UDim.new(0, 5)}, CloseButton)
 
-    CloseButton.MouseButton1Click:Connect(function()
-        LogFrame:Destroy()
-        self.LogFrame = nil
-    end)
-
     local LogScroll = Create("ScrollingFrame", {
-        Size = UDim2.new(1, -20, 1, -46),
-        Position = UDim2.new(0, 10, 0, 38),
+        Size = UDim2.new(1, -16, 1, -42),
+        Position = UDim2.new(0, 8, 0, 36),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
-        ScrollBarThickness = 4,
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255),
+        ScrollBarImageTransparency = 0.7,
         CanvasSize = UDim2.new(0, 0, 0, 0),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
         ZIndex = 10
@@ -548,25 +737,54 @@ function Protection:ShowUpdateLog(script)
         FillDirection = Enum.FillDirection.Vertical,
         Padding = UDim.new(0, 4)
     }, LogScroll)
+    Create("UIPadding", {
+        PaddingRight = UDim.new(0, 4)
+    }, LogScroll)
 
     if script.UpdateLog then
-        for _, entry in ipairs(script.UpdateLog) do
+        for i, entry in ipairs(script.UpdateLog) do
             Create("TextLabel", {
                 Size = UDim2.new(1, 0, 0, 0),
                 AutomaticSize = Enum.AutomaticSize.Y,
                 BackgroundTransparency = 1,
                 Font = Enum.Font.GothamBold,
-                Text = entry.Version .. " - " .. entry.Notes,
-                TextColor3 = Color3.fromRGB(200, 200, 205),
-                TextSize = 12,
+                Text = entry.Version .. " — " .. entry.Notes,
+                TextColor3 = Color3.fromRGB(195, 195, 200),
+                TextSize = 11,
                 TextWrapped = true,
                 TextXAlignment = Enum.TextXAlignment.Left,
-                ZIndex = 10
+                LineHeight = 1.2,
+                ZIndex = 10,
+                LayoutOrder = i
             }, LogScroll)
         end
     end
 
+    local targetHeight = math.clamp(60 + (#(script.UpdateLog or {}) * 28), 90, 200)
+
+    Tween(Overlay, {BackgroundTransparency = 0.4}, 0.25):Play()
+    Tween(LogFrame, {Size = UDim2.new(0, 230, 0, targetHeight)}, 0.3, Enum.EasingStyle.Back):Play()
+
+    local function CloseLog()
+        Tween(Overlay, {BackgroundTransparency = 1}, 0.2):Play()
+        Tween(LogFrame, {Size = UDim2.new(0, 230, 0, 0)}, 0.2):Play()
+        task.delay(0.22, function()
+            Overlay:Destroy()
+            LogFrame:Destroy()
+            self.LogFrame = nil
+            self.LogOverlay = nil
+        end)
+    end
+
+    CloseButton.MouseButton1Click:Connect(CloseLog)
+    Overlay.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            CloseLog()
+        end
+    end)
+
     self.LogFrame = LogFrame
+    self.LogOverlay = Overlay
 end
 
 return Protection
