@@ -1,0 +1,345 @@
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local MarketplaceService = game:GetService("MarketplaceService")
+local TeleportService = game:GetService("TeleportService")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+
+local function create(className, properties)
+    local instance = Instance.new(className)
+    for k, v in pairs(properties or {}) do
+        instance[k] = v
+    end
+    return instance
+end
+
+local Protection = {
+    Version = "1.0.0",
+    Games = {},
+    Scripts = {}
+}
+
+function Protection:SetVersion(version)
+    self.Version = version
+end
+
+function Protection:AddGame(gameName, gameId)
+    table.insert(self.Games, {Name = gameName, Id = gameId})
+end
+
+function Protection:AddScript(targetGameId, scriptName, loadstringUrl, updateLog)
+    if not self.Scripts[targetGameId] then
+        self.Scripts[targetGameId] = {}
+    end
+    table.insert(self.Scripts[targetGameId], {Name = scriptName, Url = loadstringUrl, Logs = updateLog})
+end
+
+function Protection:Init()
+    local player = Players.LocalPlayer
+    local gameName = "Unknown"
+    local success, info = pcall(function() return MarketplaceService:GetProductInfo(game.PlaceId) end)
+    if success and info then gameName = info.Name end
+    local currentGameId = game.GameId
+
+    local screenGui = create("ScreenGui", {
+        Name = "ProtectionHub",
+        Parent = RunService:IsStudio() and player.PlayerGui or CoreGui,
+        ResetOnSpawn = false
+    })
+
+    local mainFrame = create("Frame", {
+        Name = "MainFrame",
+        Parent = screenGui,
+        BackgroundColor3 = Color3.fromRGB(25, 25, 25),
+        BorderSizePixel = 0,
+        Position = UDim2.new(0.5, -250, 0.5, -175),
+        Size = UDim2.new(0, 500, 0, 350),
+        ClipsDescendants = true
+    })
+
+    create("UICorner", {Parent = mainFrame, CornerRadius = UDim.new(0, 8)})
+    create("UIStroke", {Parent = mainFrame, Color = Color3.fromRGB(50, 50, 50), Thickness = 1})
+
+    local leftPanel = create("Frame", {
+        Name = "LeftPanel",
+        Parent = mainFrame,
+        BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+        BorderSizePixel = 0,
+        Size = UDim2.new(0, 150, 1, 0)
+    })
+
+    local title = create("TextLabel", {
+        Parent = leftPanel,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 10, 0, 10),
+        Size = UDim2.new(1, -20, 0, 30),
+        Font = Enum.Font.GothamBold,
+        Text = "PROTECTION",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = 18,
+        TextXAlignment = Enum.TextXAlignment.Left
+    })
+    
+    create("UIStroke", {Parent = title, Color = Color3.fromRGB(255, 255, 255), Thickness = 0.5, Transparency = 0.8})
+
+    local tabContainer = create("Frame", {
+        Parent = leftPanel,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 0, 0.5, -50),
+        Size = UDim2.new(1, 0, 0, 100)
+    })
+
+    local bottomInfo = create("Frame", {
+        Parent = leftPanel,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 10, 1, -80),
+        Size = UDim2.new(1, -20, 0, 70)
+    })
+
+    local createInfoLabel = function(yOffset, text)
+        return create("TextLabel", {
+            Parent = bottomInfo,
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 0, 0, yOffset),
+            Size = UDim2.new(1, 0, 0, 15),
+            Font = Enum.Font.GothamBold,
+            Text = text,
+            TextColor3 = Color3.fromRGB(150, 150, 150),
+            TextSize = 10,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextWrapped = true
+        })
+    end
+
+    createInfoLabel(0, player.Name)
+    createInfoLabel(15, "Game: " .. gameName .. " (" .. tostring(currentGameId) .. ")")
+    local timeLabel = createInfoLabel(30, "Time: 00:00:00")
+    createInfoLabel(45, "Version: " .. self.Version)
+
+    task.spawn(function()
+        while task.wait(1) do
+            timeLabel.Text = "Time: " .. os.date("%H:%M:%S")
+        end
+    end)
+
+    local rightPanel = create("Frame", {
+        Parent = mainFrame,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 160, 0, 10),
+        Size = UDim2.new(1, -170, 1, -20)
+    })
+
+    local loaderTab = create("ScrollingFrame", {
+        Name = "LoaderTab",
+        Parent = rightPanel,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        ScrollBarThickness = 2,
+        Visible = true
+    })
+    
+    local loaderLayout = create("UIListLayout", {Parent = loaderTab, Padding = UDim.new(0, 5)})
+
+    local gameTab = create("Frame", {
+        Name = "GameTab",
+        Parent = rightPanel,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        Visible = false
+    })
+
+    local searchBar = create("TextBox", {
+        Parent = gameTab,
+        BackgroundColor3 = Color3.fromRGB(35, 35, 35),
+        Size = UDim2.new(1, 0, 0, 30),
+        Font = Enum.Font.GothamBold,
+        PlaceholderText = "Search...",
+        Text = "",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = 14
+    })
+    create("UICorner", {Parent = searchBar, CornerRadius = UDim.new(0, 4)})
+
+    local gameScroll = create("ScrollingFrame", {
+        Parent = gameTab,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 0, 0, 40),
+        Size = UDim2.new(1, 0, 1, -40),
+        ScrollBarThickness = 2
+    })
+    local gameLayout = create("UIListLayout", {Parent = gameScroll, Padding = UDim.new(0, 5)})
+
+    local function animateTabTransition(hideTab, showTab)
+        local outTween = TweenService:Create(hideTab, TweenInfo.new(0.2), {GroupTransparency = 1})
+        outTween:Play()
+        outTween.Completed:Wait()
+        hideTab.Visible = false
+        showTab.GroupTransparency = 1
+        showTab.Visible = true
+        TweenService:Create(showTab, TweenInfo.new(0.2), {GroupTransparency = 0}):Play()
+    end
+
+    local function createTabButton(name, yPos, targetFrame, otherFrame)
+        local btn = create("TextButton", {
+            Parent = tabContainer,
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 10, 0, yPos),
+            Size = UDim2.new(1, -20, 0, 30),
+            Font = Enum.Font.GothamBold,
+            Text = name,
+            TextColor3 = Color3.fromRGB(200, 200, 200),
+            TextSize = 14,
+            TextXAlignment = Enum.TextXAlignment.Left
+        })
+        
+        local stroke = create("UIStroke", {Parent = btn, Color = Color3.fromRGB(255, 255, 255), Thickness = 0.5, Transparency = 1})
+
+        btn.MouseEnter:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+            TweenService:Create(stroke, TweenInfo.new(0.2), {Transparency = 0.5}):Play()
+        end)
+        
+        btn.MouseLeave:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(200, 200, 200)}):Play()
+            TweenService:Create(stroke, TweenInfo.new(0.2), {Transparency = 1}):Play()
+        end)
+
+        btn.MouseButton1Click:Connect(function()
+            if not targetFrame.Visible then
+                animateTabTransition(otherFrame, targetFrame)
+            end
+        end)
+    end
+
+    local canvasGroupLoader = create("CanvasGroup", {Parent = loaderTab, Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1})
+    local canvasGroupGame = create("CanvasGroup", {Parent = gameTab, Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Visible = false})
+
+    createTabButton("Loader", 0, canvasGroupLoader, canvasGroupGame)
+    createTabButton("Game", 40, canvasGroupGame, canvasGroupLoader)
+
+    if self.Scripts[currentGameId] then
+        for _, scriptData in ipairs(self.Scripts[currentGameId]) do
+            local item = create("Frame", {
+                Parent = canvasGroupLoader,
+                BackgroundColor3 = Color3.fromRGB(35, 35, 35),
+                Size = UDim2.new(1, 0, 0, 40)
+            })
+            create("UICorner", {Parent = item, CornerRadius = UDim.new(0, 4)})
+
+            create("TextLabel", {
+                Parent = item,
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0, 10, 0, 0),
+                Size = UDim2.new(0.5, 0, 1, 0),
+                Font = Enum.Font.GothamBold,
+                Text = scriptData.Name,
+                TextColor3 = Color3.fromRGB(255, 255, 255),
+                TextSize = 14,
+                TextXAlignment = Enum.TextXAlignment.Left
+            })
+
+            local loadBtn = create("TextButton", {
+                Parent = item,
+                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                Position = UDim2.new(1, -80, 0.5, -12),
+                Size = UDim2.new(0, 70, 0, 24),
+                Font = Enum.Font.GothamBold,
+                Text = "Load",
+                TextColor3 = Color3.fromRGB(0, 0, 0),
+                TextSize = 12
+            })
+            create("UICorner", {Parent = loadBtn, CornerRadius = UDim.new(0, 4)})
+            create("UIStroke", {Parent = loadBtn, Color = Color3.fromRGB(0, 0, 0), Thickness = 1})
+            
+            create("ImageLabel", {
+                Parent = loadBtn,
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0, 5, 0.5, -6),
+                Size = UDim2.new(0, 12, 0, 12),
+                Image = "rbxassetid://6031094678",
+                ImageColor3 = Color3.fromRGB(0, 0, 0)
+            })
+
+            loadBtn.MouseButton1Click:Connect(function()
+                loadstring(game:HttpGet(scriptData.Url))()
+            end)
+
+            local logBtn = create("TextButton", {
+                Parent = item,
+                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                Position = UDim2.new(1, -110, 0.5, -10),
+                Size = UDim2.new(0, 20, 0, 20),
+                Text = ""
+            })
+            create("UICorner", {Parent = logBtn, CornerRadius = UDim.new(0, 4)})
+            create("UIStroke", {Parent = logBtn, Color = Color3.fromRGB(0, 0, 0), Thickness = 1})
+
+            create("ImageLabel", {
+                Parent = logBtn,
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0.5, -6, 0.5, -6),
+                Size = UDim2.new(0, 12, 0, 12),
+                Image = "rbxassetid://6031225818",
+                ImageColor3 = Color3.fromRGB(0, 0, 0)
+            })
+        end
+    end
+
+    local function refreshGameList(filter)
+        for _, child in ipairs(gameScroll:GetChildren()) do
+            if child:IsA("Frame") then child:Destroy() end
+        end
+
+        table.sort(self.Games, function(a, b) return a.Name:lower() < b.Name:lower() end)
+
+        for _, gameData in ipairs(self.Games) do
+            if filter == "" or gameData.Name:lower():find(filter:lower()) then
+                local item = create("Frame", {
+                    Parent = gameScroll,
+                    BackgroundColor3 = Color3.fromRGB(35, 35, 35),
+                    Size = UDim2.new(1, 0, 0, 40)
+                })
+                create("UICorner", {Parent = item, CornerRadius = UDim.new(0, 4)})
+
+                create("TextLabel", {
+                    Parent = item,
+                    BackgroundTransparency = 1,
+                    Position = UDim2.new(0, 10, 0, 0),
+                    Size = UDim2.new(0.5, 0, 1, 0),
+                    Font = Enum.Font.GothamBold,
+                    Text = gameData.Name,
+                    TextColor3 = Color3.fromRGB(255, 255, 255),
+                    TextSize = 14,
+                    TextXAlignment = Enum.TextXAlignment.Left
+                })
+
+                local joinBtn = create("TextButton", {
+                    Parent = item,
+                    BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                    Position = UDim2.new(1, -80, 0.5, -12),
+                    Size = UDim2.new(0, 70, 0, 24),
+                    Font = Enum.Font.GothamBold,
+                    Text = "Join",
+                    TextColor3 = Color3.fromRGB(0, 0, 0),
+                    TextSize = 12
+                })
+                create("UICorner", {Parent = joinBtn, CornerRadius = UDim.new(0, 4)})
+                create("UIStroke", {Parent = joinBtn, Color = Color3.fromRGB(0, 0, 0), Thickness = 1})
+
+                joinBtn.MouseButton1Click:Connect(function()
+                    TeleportService:Teleport(gameData.Id, player)
+                end)
+            end
+        end
+    end
+
+    searchBar.Changed:Connect(function(prop)
+        if prop == "Text" then
+            refreshGameList(searchBar.Text)
+        end
+    end)
+
+    refreshGameList("")
+end
+
+return Protection
