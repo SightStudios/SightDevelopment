@@ -15,7 +15,7 @@ getgenv().loadstring = function(src, chunkname)
         warn("Prometheus code dumped")
         -- Save to file if executor supports it
         if writefile then
-            writefile("prometheus_dump.lua", src)
+            writefile("prometheus_dump.txt", src)
         end
     end
     return oldLoadstring(src, chunkname)
