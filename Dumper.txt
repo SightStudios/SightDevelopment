@@ -4,32 +4,39 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 
--- Table to store dumped code
-local dumpedCode = ""
+local dumpedScripts = {}
+local scriptCounter = 0
+local dumpFolder = "Prot_Dumper"
 
--- Hook loadstring to intercept Prometheus code
+if makefolder then
+    makefolder(dumpFolder)
+end
+
 local oldLoadstring = loadstring
 getgenv().loadstring = function(src, chunkname)
     if type(src) == "string" and #src > 200 then
-        dumpedCode = src
-        warn("Prometheus code dumped")
-        -- Save to file if executor supports it
+        scriptCounter = scriptCounter + 1
+        local timestamp = os.time()
+        local fileName = dumpFolder .. "/dump_" .. tostring(scriptCounter) .. "_" .. tostring(timestamp) .. ".txt"
+        table.insert(dumpedScripts, {id = scriptCounter, code = src, time = timestamp})
+        
         if writefile then
-            writefile("prometheus_dump.txt", src)
+            writefile(fileName, src)
         end
+        
+        warn("Captured script #" .. tostring(scriptCounter) .. " saved as " .. fileName)
     end
     return oldLoadstring(src, chunkname)
 end
 
--- Create GUI
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "PrometheusDumperGUI"
+screenGui.Name = "ProtDumperGUI"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = lplr:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 500, 0, 300)
-frame.Position = UDim2.new(0.5, -250, 0.5, -150)
+frame.Size = UDim2.new(0, 600, 0, 400)
+frame.Position = UDim2.new(0.5, -300, 0.5, -200)
 frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 frame.BorderSizePixel = 0
 frame.Parent = screenGui
@@ -37,52 +44,161 @@ frame.Active = true
 frame.Draggable = true
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 30)
+title.Size = UDim2.new(1, 0, 0, 40)
 title.Position = UDim2.new(0, 0, 0, 0)
 title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-title.Text = "Prometheus Dump Output"
+title.Text = "Prot Dumper - Captured Scripts: 0"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.SourceSansBold
 title.TextSize = 20
 title.Parent = frame
 
+local listBox = Instance.new("ScrollingFrame")
+listBox.Size = UDim2.new(0, 200, 1, -80)
+listBox.Position = UDim2.new(0, 10, 0, 50)
+listBox.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+listBox.BorderSizePixel = 0
+listBox.Parent = frame
+listBox.CanvasSize = UDim2.new(0, 0, 0, 0)
+listBox.ScrollBarThickness = 10
+
+local listLayout = Instance.new("UIListLayout")
+listLayout.Parent = listBox
+listLayout.Padding = UDim.new(0, 5)
+
 local outputBox = Instance.new("TextBox")
-outputBox.Size = UDim2.new(1, -20, 1, -80)
-outputBox.Position = UDim2.new(0, 10, 0, 40)
+outputBox.Size = UDim2.new(0, 350, 1, -80)
+outputBox.Position = UDim2.new(0, 220, 0, 50)
 outputBox.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 outputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 outputBox.Font = Enum.Font.Code
-outputBox.TextSize = 14
+outputBox.TextSize = 12
 outputBox.TextWrapped = true
 outputBox.ClearTextOnFocus = false
-outputBox.Text = "Waiting for dump..."
+outputBox.Text = "Select a script from the left"
 outputBox.MultiLine = true
 outputBox.Parent = frame
 
 local copyButton = Instance.new("TextButton")
-copyButton.Size = UDim2.new(0, 150, 0, 30)
-copyButton.Position = UDim2.new(0.5, -75, 1, -40)
+copyButton.Size = UDim2.new(0, 150, 0, 35)
+copyButton.Position = UDim2.new(0, 220, 1, -45)
 copyButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 copyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 copyButton.Font = Enum.Font.SourceSansBold
-copyButton.TextSize = 18
-copyButton.Text = "Copy Output"
+copyButton.TextSize = 16
+copyButton.Text = "Copy Selected"
 copyButton.Parent = frame
 
+local saveButton = Instance.new("TextButton")
+saveButton.Size = UDim2.new(0, 150, 0, 35)
+saveButton.Position = UDim2.new(0, 380, 1, -45)
+saveButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+saveButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+saveButton.Font = Enum.Font.SourceSansBold
+saveButton.TextSize = 16
+saveButton.Text = "Save Selected"
+saveButton.Parent = frame
+
+local refreshButton = Instance.new("TextButton")
+refreshButton.Size = UDim2.new(0, 100, 0, 35)
+refreshButton.Position = UDim2.new(0, 490, 1, -45)
+refreshButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+refreshButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+refreshButton.Font = Enum.Font.SourceSansBold
+refreshButton.TextSize = 14
+refreshButton.Text = "Refresh"
+refreshButton.Parent = frame
+
+local selectedScriptId = nil
+
+local function updateScriptList()
+    for _, child in pairs(listBox:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+    
+    title.Text = "Prot Dumper - Captured Scripts: " .. tostring(#dumpedScripts)
+    
+    for _, script in ipairs(dumpedScripts) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -10, 0, 40)
+        btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.Font = Enum.Font.SourceSans
+        btn.TextSize = 12
+        btn.Text = "Script #" .. tostring(script.id) .. " - " .. os.date("%H:%M:%S", script.time)
+        btn.Parent = listBox
+        btn.MouseButton1Click:Connect(function()
+            selectedScriptId = script.id
+            outputBox.Text = script.code
+            for _, otherBtn in pairs(listBox:GetChildren()) do
+                if otherBtn:IsA("TextButton") then
+                    otherBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                end
+            end
+            btn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+        end)
+    end
+    
+    listBox.CanvasSize = UDim2.new(0, 0, 0, (#dumpedScripts * 45) + 10)
+end
+
 copyButton.MouseButton1Click:Connect(function()
-    if setclipboard then
-        setclipboard(dumpedCode)
-        outputBox.Text = "Copied to clipboard!"
+    if selectedScriptId then
+        for _, script in ipairs(dumpedScripts) do
+            if script.id == selectedScriptId then
+                if setclipboard then
+                    setclipboard(script.code)
+                    outputBox.Text = "Copied to clipboard!"
+                else
+                    outputBox.Text = "Executor does not support clipboard."
+                end
+                break
+            end
+        end
     else
-        outputBox.Text = "Executor does not support clipboard."
+        outputBox.Text = "No script selected."
     end
 end)
 
--- Update GUI when dump happens
+saveButton.MouseButton1Click:Connect(function()
+    if selectedScriptId then
+        for _, script in ipairs(dumpedScripts) do
+            if script.id == selectedScriptId then
+                if writefile then
+                    local saveName = dumpFolder .. "/manual_save_" .. tostring(script.id) .. "_" .. tostring(os.time()) .. ".txt"
+                    writefile(saveName, script.code)
+                    outputBox.Text = "Saved to " .. saveName
+                else
+                    outputBox.Text = "Executor does not support writefile."
+                end
+                break
+            end
+        end
+    else
+        outputBox.Text = "No script selected."
+    end
+end)
+
+refreshButton.MouseButton1Click:Connect(function()
+    updateScriptList()
+    outputBox.Text = "Refreshed!"
+    task.wait(0.5)
+    if selectedScriptId then
+        for _, script in ipairs(dumpedScripts) do
+            if script.id == selectedScriptId then
+                outputBox.Text = script.code
+                break
+            end
+        end
+    end
+end)
+
 RunService.RenderStepped:Connect(function()
-    if dumpedCode ~= "" and outputBox.Text ~= dumpedCode then
-        outputBox.Text = dumpedCode
+    if #dumpedScripts > 0 and (#listBox:GetChildren() - 1) ~= #dumpedScripts then
+        updateScriptList()
     end
 end)
 
-warn("Prometheus Dumper GUI ready. Execute your obfuscated script now.")
+warn("Prot Dumper ready. Execute any script now - every capture will be saved to '" .. dumpFolder .. "' folder")
